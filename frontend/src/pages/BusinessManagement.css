@@ -1,0 +1,93 @@
+.business-management-page { min-height: 100vh; background: #f5f7fb; color: #111827; }
+.business-management { width: min(100%, 1200px); margin: 0 auto; padding: 42px 32px 68px; }
+.business-management-header { margin-bottom: 26px; }
+.business-management-header .manage-eyebrow { margin: 0 0 8px; color: #6b7280; font-size: 12px; font-weight: 700; letter-spacing: .09em; }
+.business-management-header h1 { margin: 0 0 8px; font-size: 38px; line-height: 1.15; letter-spacing: -.035em; }
+.business-management-header > p:not(.manage-eyebrow):not(.manage-error) { margin: 0; color: #6b7280; font-size: 15px; }
+.manage-error { padding: 10px 12px; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; color: #991b1b; font-size: 13px; }
+.manage-hero-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+.manage-business-identity { min-width: 0; }
+.manage-business-identity h1 { overflow-wrap: anywhere; }
+.manage-business-identity > p { margin: 15px 0 0; color: #6b7280; font-size: 14px; }
+.manage-public-link { display: inline-flex; align-items: center; gap: 11px; max-width: 100%; margin-top: 5px; padding: 9px 12px; border: 1px solid #e5e7eb; border-radius: 9px; background: #fff; color: #111827; text-decoration: none; transition: border-color .15s ease, box-shadow .15s ease; }
+.manage-public-link:hover { border-color: #cbd5e1; box-shadow: 0 3px 10px rgba(17, 24, 39, .06); }
+.manage-link-mark { display: grid; width: 32px; height: 32px; flex-shrink: 0; place-items: center; border-radius: 7px; background: #f3f4f6; color: #374151; font-size: 17px; }
+.manage-public-link > span:last-child { display: grid; gap: 3px; min-width: 0; }
+.manage-public-link small { color: #6b7280; font-size: 9px; font-weight: 700; letter-spacing: .1em; }
+.manage-public-link strong { overflow: hidden; color: #374151; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.manage-business-actions { display: flex; flex-shrink: 0; gap: 9px; padding-top: 5px; }
+.manage-business-actions button, .manage-business-form-actions button { min-height: 40px; padding: 0 14px; border: 1px solid #dfe3e8; border-radius: 8px; background: #fff; color: #374151; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.manage-business-actions .manage-edit-button:hover, .manage-cancel-button:hover { border-color: #cbd5e1; background: #f9fafb; }
+.manage-business-actions .manage-delete-button { border-color: #fecaca; color: #b42318; }
+.manage-business-actions .manage-delete-button:hover { border-color: #fca5a5; background: #fff7f6; }
+.manage-business-actions button:disabled { cursor: wait; opacity: .6; }
+.manage-panel { margin: 0 0 18px; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .035); }
+.manage-section-heading { display: flex; justify-content: space-between; margin-bottom: 18px; }
+.manage-section-heading h2, .manage-panel > section > h2 { margin: 0 0 5px; color: #111827; font-size: 20px; letter-spacing: -.02em; }
+.manage-section-heading p { margin: 0; color: #6b7280; font-size: 13px; }
+.manage-edit-panel { margin-top: -8px; }
+.manage-business-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
+.manage-business-form label { display: grid; gap: 7px; color: #374151; font-size: 12px; font-weight: 600; }
+.manage-business-form input, .manage-business-form select { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; color: #111827; font: inherit; font-size: 13px; outline: none; }
+.manage-business-form input:focus, .manage-business-form select:focus { border-color: #6b7280; box-shadow: 0 0 0 3px rgba(17, 24, 39, .07); }
+.manage-business-form-actions { display: flex; justify-content: flex-end; grid-column: 1 / -1; gap: 9px; padding-top: 4px; }
+.manage-business-form-actions .manage-save-button { border-color: #111827; background: #111827; color: #fff; }
+.manage-business-form-actions .manage-save-button:hover { background: #1f2937; }
+.manage-business-form-actions button:disabled { cursor: wait; opacity: .6; }
+
+/* Service cards and their primary/secondary actions. */
+.manage-service-list .manage-section-heading { align-items: center; margin-bottom: 18px; }
+.manage-service-list .manage-section-heading h2 { margin: 0 0 5px; color: #111827; font-size: 20px; }
+.manage-service-list .manage-section-heading p { margin: 0; color: #6b7280; font-size: 13px; }
+.manage-service-count { padding: 6px 10px; border-radius: 999px; background: #f3f4f6; color: #4b5563; font-size: 12px; font-weight: 600; }
+.manage-service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.manage-service-card { min-width: 0; padding: 17px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
+.manage-service-card:hover { border-color: #d5dbe3; box-shadow: 0 4px 14px rgba(17, 24, 39, .045); }
+.manage-service-card-main { display: flex; align-items: center; gap: 12px; }
+.manage-service-symbol { display: grid; width: 38px; height: 38px; flex-shrink: 0; place-items: center; border-radius: 9px; background: #f3f4f6; color: #4b5563; font-size: 13px; font-weight: 700; }
+.manage-service-details { min-width: 0; flex: 1; }
+.manage-service-details h3 { overflow: hidden; margin: 0 0 5px; color: #111827; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.manage-service-details p { margin: 0; color: #6b7280; font-size: 12px; }
+.manage-service-details p span { margin: 0 3px; color: #c0c5cc; }
+.manage-service-status { flex-shrink: 0; padding: 5px 8px; border-radius: 999px; font-size: 10px; font-weight: 650; }
+.manage-service-status.is-active { background: #ecfdf3; color: #067647; }
+.manage-service-status.is-inactive { background: #f3f4f6; color: #667085; }
+.manage-service-actions { display: flex; gap: 8px; margin-top: 16px; padding-top: 13px; border-top: 1px solid #f0f1f3; }
+.manage-service-actions button { min-height: 35px; padding: 0 12px; border: 1px solid #e4e7ec; border-radius: 7px; background: #fff; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+.manage-service-actions .manage-service-edit { border-color: #15803d; background: #15803d; color: #fff; }
+.manage-service-actions .manage-service-edit:hover { border-color: #166534; background: #166534; }
+.manage-service-actions .manage-service-delete { border-color: #fee4e2; color: #b42318; }
+.manage-service-actions .manage-service-delete:hover { border-color: #fda29b; background: #fff7f6; }
+.manage-service-actions button:disabled { cursor: wait; opacity: .6; }
+.manage-service-empty { padding: 24px; border: 1px dashed #d1d5db; border-radius: 9px; color: #6b7280; text-align: center; }
+.manage-service-empty h3 { margin: 0 0 5px; color: #111827; font-size: 15px; }
+.manage-service-empty p, .manage-service-muted { margin: 0; color: #6b7280; font-size: 13px; }
+.manage-service-error { padding: 10px 12px; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; color: #991b1b; font-size: 13px; }
+.manage-service-edit-form { margin-top: 16px; padding: 18px; border: 1px solid #e5e7eb; border-radius: 9px; background: #f9fafb; }
+.manage-service-edit-form h3 { margin: 0 0 14px; font-size: 15px; }
+.manage-service-edit-fields { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
+.manage-service-edit-fields label { display: grid; gap: 6px; color: #4b5563; font-size: 12px; font-weight: 600; }
+.manage-service-edit-fields input { min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid #dfe3e8; border-radius: 7px; background: #fff; font: inherit; font-size: 13px; }
+.manage-service-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.manage-service-edit-actions button { min-height: 36px; padding: 0 12px; border: 1px solid #dfe3e8; border-radius: 7px; background: #fff; color: #374151; font-size: 12px; font-weight: 600; cursor: pointer; }
+.manage-service-edit-actions .manage-service-edit-save { border-color: #111827; background: #111827; color: #fff; }
+.manage-service-edit-actions button:disabled { cursor: wait; opacity: .6; }
+.manage-bookings h2 { margin: 0 0 16px; font-size: 20px; }
+.manage-bookings h3 { margin: 18px 0 10px; font-size: 15px; }
+.manage-bookings form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.manage-bookings input, .manage-bookings select { min-height: 42px; padding: 0 11px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; font: inherit; font-size: 13px; }
+.manage-bookings form button { min-height: 40px; border: 0; border-radius: 7px; background: #111827; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+.manage-bookings hr { border: 0; border-top: 1px solid #e5e7eb; }
+
+@media (max-width: 700px) {
+  .business-management { padding: 30px 18px 50px; }
+  .business-management-header h1 { font-size: 32px; }
+  .manage-panel { padding: 18px; }
+  .manage-bookings form { grid-template-columns: 1fr; }
+  .manage-hero-row { flex-direction: column; gap: 17px; }
+  .manage-business-actions { padding-top: 0; }
+  .manage-business-actions button { flex: 1; }
+  .manage-business-form { grid-template-columns: 1fr; }
+  .manage-business-form-actions { grid-column: auto; }
+  .manage-service-edit-fields { grid-template-columns: 1fr; }
+}

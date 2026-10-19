@@ -1,0 +1,19 @@
+.business-hours { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.business-day-card { min-width: 0; padding: 16px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
+.business-day-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.business-day-header h3 { margin: 0; color: #111827; font-size: 15px; font-weight: 650; }
+.business-open-toggle { display: inline-flex; align-items: center; gap: 7px; color: #4b5563; font-size: 12px; font-weight: 600; cursor: pointer; }
+.business-open-toggle input { width: 16px; height: 16px; margin: 0; accent-color: #111827; }
+.business-time-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.business-time-fields label { display: grid; gap: 6px; color: #6b7280; font-size: 11px; font-weight: 600; }
+.business-time-fields input { width: 100%; min-height: 38px; padding: 0 9px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; color: #111827; font: inherit; font-size: 13px; }
+.business-time-fields input:focus { border-color: #6b7280; outline: 3px solid rgba(17, 24, 39, .07); }
+.closed-text { min-height: 38px; margin: 18px 0 0; color: #9ca3af; font-size: 13px; }
+.hours-save-row { display: flex; align-items: center; gap: 9px; margin-top: 13px; }
+.save-hours-button { min-height: 34px; padding: 0 13px; border: 0; border-radius: 7px; background: #111827; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
+.save-hours-button:hover { background: #1f2937; }
+.save-hours-button:disabled { cursor: wait; opacity: .65; }
+.hours-saved { color: #166534; font-size: 12px; font-weight: 600; }
+.business-hours-error { grid-column: 1 / -1; padding: 11px 13px; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; color: #991b1b; font-size: 13px; }
+
+@media (max-width: 800px) { .business-hours { grid-template-columns: 1fr; } }
