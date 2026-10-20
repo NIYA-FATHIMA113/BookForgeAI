@@ -17,6 +17,34 @@ class Tenant(models.Model):
         ("playful", "Cartoon pop"),
     ]
 
+    WEBSITE_FONTS = [
+        ("classic", "Classic serif"),
+        ("modern", "Modern sans serif"),
+        ("friendly", "Friendly rounded"),
+        ("editorial", "Editorial display"),
+        ("mono", "Minimal mono"),
+    ]
+
+    WEBSITE_TEMPLATES = [
+        ("auto", "Match business type"),
+        ("restaurant_classic", "Classic bistro"),
+        ("restaurant_modern", "Modern menu"),
+        ("restaurant_bistro", "Neighborhood bistro"),
+        ("restaurant_market", "Market table"),
+        ("salon_editorial", "Editorial studio"),
+        ("salon_minimal", "Minimal studio"),
+        ("salon_botanical", "Botanical beauty"),
+        ("salon_glam", "Glam lounge"),
+        ("clinic_calm", "Calm care"),
+        ("clinic_modern", "Modern practice"),
+        ("clinic_family", "Family clinic"),
+        ("clinic_holistic", "Holistic wellness"),
+        ("sports_arena", "Arena"),
+        ("sports_club", "Sports club"),
+        ("sports_field", "Open field"),
+        ("sports_night", "Night game"),
+    ]
+
     BUSINESS_TYPES = [
         ("restaurant", "Restaurant"),
         ("salon", "Salon"),
@@ -48,6 +76,15 @@ class Tenant(models.Model):
         choices=WEBSITE_STYLES,
         default="auto",
     )
+    website_template = models.CharField(max_length=30, choices=WEBSITE_TEMPLATES, default="auto")
+    website_font = models.CharField(max_length=20, choices=WEBSITE_FONTS, default="classic")
+    business_name_font = models.CharField(max_length=20, choices=WEBSITE_FONTS, default="editorial")
+
+    logo_image = models.ImageField(upload_to="businesses/logos/", blank=True, null=True)
+    hero_image = models.ImageField(upload_to="businesses/hero/", blank=True, null=True)
+    instagram_handle = models.CharField(max_length=100, blank=True)
+    whatsapp_number = models.CharField(max_length=30, blank=True)
+    facebook_id = models.CharField(max_length=200, blank=True)
 
     # -----------------------------
     # Business contact information

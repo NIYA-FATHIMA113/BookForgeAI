@@ -57,6 +57,9 @@ def create_business_from_configuration(
     owner,
     services_data,
     website_style="auto",
+    website_font="classic",
+    business_name_font="editorial",
+    website_template="auto",
 ):
     """
     Convert confirmed AI business configuration
@@ -93,6 +96,17 @@ def create_business_from_configuration(
     allowed_styles = {value for value, _label in Tenant.WEBSITE_STYLES}
     if website_style not in allowed_styles:
         raise ValueError("Choose a supported website style.")
+    allowed_fonts = {value for value, _label in Tenant.WEBSITE_FONTS}
+    if website_font not in allowed_fonts:
+        raise ValueError("Choose a supported website font.")
+    if business_name_font not in allowed_fonts:
+        raise ValueError("Choose a supported business name font.")
+    allowed_templates = {value for value, _label in Tenant.WEBSITE_TEMPLATES}
+    if website_template not in allowed_templates:
+        raise ValueError("Choose a supported website template.")
+    template_prefix = "sports" if business_type == "sports_turf" else business_type
+    if website_template != "auto" and not website_template.startswith(f"{template_prefix}_"):
+        raise ValueError("Choose a template for this type of business.")
 
     # --------------------------------
     # 2. Create / update Tenant
@@ -116,6 +130,9 @@ def create_business_from_configuration(
         )
     tenant.business_type = business_type
     tenant.website_style = website_style
+    tenant.website_font = website_font
+    tenant.business_name_font = business_name_font
+    tenant.website_template = website_template
     tenant.location = configuration.location or ""
     tenant.contact_phone = configuration.contact_phone or ""
     tenant.contact_email = configuration.contact_email or ""

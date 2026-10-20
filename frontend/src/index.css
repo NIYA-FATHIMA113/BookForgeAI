@@ -818,6 +818,9 @@ body {
   background: var(--sp-bg);
   color: var(--sp-ink);
 }
+.website-font-select { display: grid; max-width: 420px; gap: 7px; margin-top: 20px; color: #344054; font-size: 12px; font-weight: 650; }
+.website-font-select select { min-height: 42px; padding: 0 10px; border: 1px solid #d0d5dd; border-radius: 7px; background: #fff; color: #101828; font: inherit; }
+.website-font-select small { color: #667085; font-size: 11px; font-weight: 400; }
 .website-style-live-preview.theme-modern { --sp-bg: #eaf1f5; --sp-ink: #213345; --sp-primary: #315b83; }
 .website-style-live-preview.theme-warm { --sp-bg: #f8eee4; --sp-ink: #39271f; --sp-primary: #a64f38; }
 .website-style-live-preview.theme-bold { --sp-bg: #f5e8dc; --sp-ink: #2d2521; --sp-primary: #c24e23; }
@@ -850,6 +853,11 @@ body {
 .website-style-live-preview.theme-playful .style-preview-scene b { border: 2px solid #32213d; border-radius: 999px; box-shadow: 2px 3px 0 #32213d; }
 .website-style-live-preview.theme-3d .style-preview-scene::after { content: ""; position: absolute; width: 38px; height: 38px; margin: 28px 0 0 78%; border: 1px solid rgba(255,255,255,.45); border-radius: 50%; animation: style-orbit 5s ease-in-out infinite; }
 .style-preview-scene { position: relative; overflow: hidden; }
+.website-style-live-preview.font-classic .style-preview-scene strong,
+.website-style-live-preview.font-editorial .style-preview-scene strong { font-family: Georgia, "Times New Roman", serif; }
+.website-style-live-preview.font-modern .style-preview-scene strong { font-family: Arial, sans-serif; }
+.website-style-live-preview.font-friendly .style-preview-scene strong { font-family: "Trebuchet MS", Verdana, sans-serif; }
+.website-style-live-preview.font-mono .style-preview-scene strong { font-family: "Courier New", monospace; }
 @keyframes style-orbit { 0%,100% { transform: translateY(0) scale(.92); } 50% { transform: translateY(-7px) scale(1.08); } }
 
 @media (max-width: 760px) {
@@ -911,3 +919,41 @@ body {
   .website-style-option:hover { transform: none; }
   .website-style-live-preview.theme-3d .style-preview-scene::after { animation: none; }
 }
+.business-name-preview { margin-top: 3px; }
+.business-name-preview.name-font-classic { font-family: Georgia, "Times New Roman", serif; }
+.business-name-preview.name-font-modern { font-family: "Trebuchet MS", Arial, sans-serif; }
+.business-name-preview.name-font-friendly { font-family: "Trebuchet MS", Verdana, sans-serif; font-weight: 700; }
+.business-name-preview.name-font-editorial { font-family: "Palatino Linotype", Palatino, Georgia, serif; font-style: italic; }
+.business-name-preview.name-font-mono { font-family: "Courier New", monospace; }
+.website-template-picker { margin-top: 22px; padding: 18px; border: 1px solid #e2e2d9; border-radius: 11px; background: #fafaf6; }
+.website-template-picker h4 { margin: 0 0 4px; color: #1f2937; font-size: 15px; }
+.website-template-picker > p { margin: 0 0 13px; color: #667085; font-size: 11px; }
+.website-template-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+.website-template-option { display: grid; grid-template-columns: 18px minmax(0,1fr); gap: 3px 8px; align-content: start; min-height: 82px; padding: 12px; border: 1px solid #e0e3dc; border-radius: 8px; background: #fff; cursor: pointer; }
+.website-template-option.selected { border-color: #426b52; background: #f2f7f1; box-shadow: 0 0 0 2px rgba(66,107,82,.1); }
+.website-template-option input { grid-row: span 2; margin: 2px 0 0; accent-color: #315b47; }
+.website-template-option strong { color: #344054; font-size: 11px; }
+.website-template-option small { color: #667085; font-size: 10px; line-height: 1.4; }
+.website-template-art { position: relative; display: block; grid-column: 1 / -1; height: 45px; overflow: hidden; border-radius: 6px; background: linear-gradient(130deg,#344f43,#8fa78b); }
+.website-template-art i,
+.website-template-art b { position: absolute; display: block; }
+.website-template-art i:first-child { inset: 9px 9px auto auto; width: 42%; height: 27px; border-radius: 4px; background: rgba(255,255,255,.42); }
+.website-template-art i:nth-child(2) { inset: 13px auto auto 10px; width: 28%; height: 4px; background: rgba(255,255,255,.88); box-shadow: 0 8px rgba(255,255,255,.55); }
+.website-template-art b { inset: auto auto 7px 10px; width: 17%; height: 7px; border-radius: 8px; background: #f0cc92; }
+.template-art-restaurant_classic { background: linear-gradient(110deg,#422b20,#bd8558); }
+.template-art-restaurant_modern { background: linear-gradient(0deg,rgba(23,32,38,.7),transparent),linear-gradient(110deg,#cad3d3,#617d83); }
+.template-art-restaurant_modern i:first-child { inset: auto 0 0; width: 100%; height: 17px; border-radius: 0; }
+.template-art-restaurant_bistro { background: linear-gradient(90deg,#eee0cb 55%,#a76d4c 55%); }
+.template-art-restaurant_market { background: linear-gradient(120deg,#d25b36,#efbd50 55%,#618653); }
+.template-art-salon_editorial { background: linear-gradient(90deg,#f5efe5 48%,#a69d8a 48%); }
+.template-art-salon_minimal { background: linear-gradient(90deg,#f2f2ee 50%,#c8cbc6 50%); border-radius: 2px; }
+.template-art-salon_botanical { background: radial-gradient(ellipse at 70% 100%,#78906b 0 40%,transparent 41%),#e2ead5; border-radius: 50% 50% 5px 5px; }
+.template-art-salon_glam { background: linear-gradient(90deg,#271d29 52%,#a58a65 52%); }
+.template-art-clinic_calm { background: radial-gradient(ellipse at 50% 110%,#b8c9b9 0 45%,transparent 46%),#eef2ec; border-radius: 50% 50% 6px 6px; }
+.template-art-clinic_modern { background: linear-gradient(90deg,#f4f6f3 47%,#a7bdb7 47%); border-radius: 3px; }
+.template-art-clinic_family { background: linear-gradient(145deg,#dcecea,#8ab9b0); }
+.template-art-clinic_holistic { background: radial-gradient(ellipse at 50% 120%,#93a884 0 47%,transparent 48%),#e8efe0; }
+.template-art-sports_arena { background: linear-gradient(100deg,#183d31,#527649); }
+.template-art-sports_club { background: linear-gradient(100deg,#365c48,#a5c273); }
+.template-art-sports_field { background: linear-gradient(140deg,#aacb8b 0 45%,#638750 46% 68%,#d4e2bc 69%); border-radius: 50% 5px; }
+.template-art-sports_night { background: linear-gradient(110deg,#14182a,#4e3a83 70%,#b8ff54); }

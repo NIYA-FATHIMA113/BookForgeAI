@@ -5,6 +5,14 @@ from .models import Tenant
 
 class TenantSerializer(serializers.ModelSerializer):
 
+    def validate(self, attrs):
+        business_type = attrs.get("business_type", getattr(self.instance, "business_type", ""))
+        website_template = attrs.get("website_template", getattr(self.instance, "website_template", "auto"))
+        template_prefix = "sports" if business_type == "sports_turf" else business_type
+        if website_template != "auto" and not website_template.startswith(f"{template_prefix}_"):
+            raise serializers.ValidationError({"website_template": "Choose a template for this business type."})
+        return attrs
+
     class Meta:
         model = Tenant
 
@@ -14,6 +22,14 @@ class TenantSerializer(serializers.ModelSerializer):
             "slug",
             "business_type",
             "website_style",
+            "website_template",
+            "website_font",
+            "business_name_font",
+            "logo_image",
+            "hero_image",
+            "instagram_handle",
+            "whatsapp_number",
+            "facebook_id",
             "location",
             "contact_phone",
             "contact_email",

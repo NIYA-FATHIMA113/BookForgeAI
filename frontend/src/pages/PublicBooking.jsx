@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { templatesForBusiness } from "../constants/websiteTemplates";
 import "./PublicBooking.css";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -72,6 +73,29 @@ function getBusinessTypeLabel(type) {
     restaurant: "Dining",
     sports_turf: "Sports & recreation",
   }[type] || "Appointments";
+}
+
+function getBusinessCopy(type) {
+  return {
+    restaurant: { title: <>A table for<br /><em>good moments.</em></>, intro: "Explore our menu and reserve a table at a time that suits you.", action: "Reserve a table", services: "Explore the menu", booking: "Reserve your table", item: "Menu", serviceNote: "Pick a dining option, then see available reservation times.", step: "Menu item" },
+    salon: { title: <>A little time,<br /><em>well spent.</em></>, intro: "Explore our treatments and choose a time for your next visit.", action: "Book a visit", services: "Choose a treatment", booking: "Book your visit", item: "Treatments", serviceNote: "Choose a treatment and a time that works for you.", step: "Treatment" },
+    clinic: { title: <>Care that fits<br /><em>your day.</em></>, intro: "Explore available appointments and choose a time for your visit.", action: "Book an appointment", services: "Available appointments", booking: "Schedule your visit", item: "Appointments", serviceNote: "Choose an appointment type and a time for your visit.", step: "Appointment" },
+    sports_turf: { title: <>Make time<br /><em>to play.</em></>, intro: "Choose your activity and reserve an available time on the field.", action: "Reserve a slot", services: "Choose your activity", booking: "Reserve your slot", item: "Activities", serviceNote: "Choose an activity and check the available field times.", step: "Activity" },
+  }[type] || { title: <>A little time,<br /><em>well spent.</em></>, intro: "Explore the services, then choose a date and time that works for you.", action: "Book an appointment", services: "Choose your experience", booking: "Make it yours", item: "Services", serviceNote: "Find the service that feels right, then choose an available time.", step: "Service" };
+}
+
+function socialProfileUrl(platform, value) {
+  const profile = value?.trim();
+  if (!profile) return "";
+  if (/^https?:\/\//i.test(profile)) return profile;
+  const clean = profile.replace(/^@/, "");
+  const base = platform === "instagram" ? "https://www.instagram.com/" : "https://www.facebook.com/";
+  return `${base}${encodeURIComponent(clean)}`;
+}
+
+function whatsappUrl(value) {
+  const digits = (value || "").replace(/\D/g, "");
+  return digits ? `https://wa.me/${digits}` : "";
 }
 
 function PublicBooking() {
@@ -154,7 +178,20 @@ function PublicBooking() {
 
   const theme = resolveWebsiteTheme(business);
   const businessName = business?.business_name || slug.replace(/-/g, " ");
-  const photo = EDITORIAL_PHOTOS[business?.business_type] || null;
+  const photo = business?.hero_image
+    ? { src: business.hero_image, alt: `Photo provided by ${businessName}`, credit: null, href: null }
+    : EDITORIAL_PHOTOS[business?.business_type] || null;
+  const businessCopy = getBusinessCopy(business?.business_type);
+  const businessType = business?.business_type || "salon";
+  const defaultTemplate = { restaurant: "restaurant_classic", salon: "salon_editorial", clinic: "clinic_calm", sports_turf: "sports_arena" }[businessType] || "salon_editorial";
+  const requestedTemplate = business?.website_template;
+  const templateLabel = requestedTemplate && templatesForBusiness(businessType).some(([value]) => value === requestedTemplate)
+    ? requestedTemplate
+    : defaultTemplate;
+  const templateGroup = { restaurant: "restaurant", salon: "salon", clinic: "clinic", sports_turf: "sports" }[businessType] || "salon";
+  const instagramUrl = socialProfileUrl("instagram", business?.instagram_handle);
+  const facebookUrl = socialProfileUrl("facebook", business?.facebook_id);
+  const whatsappLink = whatsappUrl(business?.whatsapp_number);
   const businessHours = useMemo(() => {
     const records = new Map((business?.business_hours || []).map((item) => [item.day_of_week, item]));
     return DAYS.map((day, index) => {
@@ -165,6 +202,11 @@ function PublicBooking() {
     });
   }, [business?.business_hours]);
   const hasBusinessHours = (business?.business_hours || []).length > 0;
+
+  const heroPhoto = <div className="template-photo">
+    {photo && !heroImageFailed ? <img src={photo.src} alt={photo.alt} fetchPriority="high" onError={() => setHeroImageFailed(true)} /> : <div className="hero-image-fallback" aria-hidden="true"><span>{business?.business_type === "clinic" ? "A considered space for your visit" : business?.business_type === "restaurant" ? "A table, made for you" : "Make room for a little care"}</span></div>}
+    {photo?.credit && !heroImageFailed && <a className="photo-credit" href={photo.href} target="_blank" rel="noreferrer">Photo by {photo.credit} · Unsplash</a>}
+  </div>;
 
   const jumpTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   const chooseService = (service) => {
@@ -227,11 +269,11 @@ function PublicBooking() {
   }
 
   return (
-    <main className="public-booking" data-theme={theme}>
+    <main className="public-booking" data-theme={theme} data-business-type={businessType} data-template={templateLabel} data-font={business?.website_font || "classic"} data-name-font={business?.business_name_font || "editorial"}>
       <a className="skip-link" href="#main-content">Skip to content</a>
       <nav className="public-nav" aria-label="Main navigation">
         <a className="public-brand" href="#home" aria-label={`${businessName}, home`}>
-          <span className="brand-mark" aria-hidden="true">{businessName.charAt(0)}</span>
+          {business?.logo_image ? <img className="public-logo" src={business.logo_image} alt="" /> : <span className="brand-mark" aria-hidden="true">{businessName.charAt(0)}</span>}
           <span>{businessName}</span>
         </a>
         <div className="public-nav-links">
@@ -240,35 +282,37 @@ function PublicBooking() {
           <a href="#about">About</a>
           <a href="#contact">Contact</a>
         </div>
-        <button className="editorial-button nav-book-button" type="button" onClick={() => jumpTo("services")}>Book an appointment <span aria-hidden="true">↗</span></button>
+        <button className="editorial-button nav-book-button" type="button" onClick={() => jumpTo("services")}>{businessCopy.action} <span aria-hidden="true">↗</span></button>
       </nav>
 
       <div id="main-content">
-        <section className="editorial-hero" id="home" aria-labelledby="business-title">
-          <div className="editorial-hero-copy">
-            <p className="public-eyebrow">{getBusinessTypeLabel(business?.business_type)}{business?.location ? ` · ${business.location}` : ""}</p>
-            <h1 id="business-title">A little time,<br /><em>well spent.</em></h1>
-            <p className="editorial-lede">Explore the services at {businessName}, then choose a date and time that works for you.</p>
-            <button className="editorial-button" type="button" onClick={() => jumpTo("services")}>Discover services <span aria-hidden="true">↓</span></button>
-            <div className="hero-note"><span className="hero-note-rule" />Appointments, at your pace</div>
-          </div>
-          <div className={`editorial-hero-image ${heroImageFailed || !photo ? "has-fallback" : ""}`}>
-            {photo && !heroImageFailed ? <img src={photo.src} alt={photo.alt} fetchPriority="high" onError={() => setHeroImageFailed(true)} /> : <div className="hero-image-fallback" aria-hidden="true"><span>{business?.business_type === "clinic" ? "A considered space for your visit" : business?.business_type === "restaurant" ? "A table, made for you" : "Make room for a little care"}</span></div>}
-            {photo && !heroImageFailed && <a className="photo-credit" href={photo.href} target="_blank" rel="noreferrer">Photo by {photo.credit} · Unsplash</a>}
-            <div className="hero-image-caption"><span>01</span><span>{business?.location || getBusinessTypeLabel(business?.business_type)}</span></div>
-          </div>
-          <div className="hero-side-label" aria-hidden="true">A more personal kind of booking</div>
-        </section>
+        {businessType === "restaurant" && <section className="restaurant-hero" id="home" aria-labelledby="business-title">
+          {heroPhoto}<div className="restaurant-hero-shade" />
+          <div className="restaurant-hero-content"><p className="public-eyebrow">{business?.location || "A PLACE AT THE TABLE"}</p><h1 id="business-title">{businessCopy.title}</h1><p>{businessCopy.intro}</p><button className="editorial-button" type="button" onClick={() => jumpTo("services")}>{businessCopy.action}<span>↓</span></button></div>
+          <span className="restaurant-hero-caption">{businessName} · {businessCopy.item}</span>
+        </section>}
+        {businessType === "salon" && <section className="salon-hero" id="home" aria-labelledby="business-title">
+          <div className="salon-hero-copy"><p className="public-eyebrow">{getBusinessTypeLabel(businessType)}{business?.location ? ` · ${business.location}` : ""}</p><h1 id="business-title">{businessCopy.title}</h1><p className="editorial-lede">{businessCopy.intro}</p><button className="editorial-button" type="button" onClick={() => jumpTo("services")}>{businessCopy.action}<span>↓</span></button><div className="hero-note"><span className="hero-note-rule" />Personal care, your way</div></div>
+          <div className="salon-hero-photo">{heroPhoto}<span className="photo-number">01 / YOUR VISIT</span></div>
+        </section>}
+        {businessType === "clinic" && <section className="clinic-hero" id="home" aria-labelledby="business-title">
+          <div className="clinic-hero-copy"><p className="public-eyebrow">{getBusinessTypeLabel(businessType)}{business?.location ? ` · ${business.location}` : ""}</p><h1 id="business-title">{businessCopy.title}</h1><p>{businessCopy.intro}</p><button className="editorial-button" type="button" onClick={() => jumpTo("services")}>{businessCopy.action}<span>↓</span></button></div>
+          <div className="clinic-hero-photo">{heroPhoto}<div className="clinic-photo-note"><span>Thoughtful care</span><small>{business?.location || businessName}</small></div></div>
+        </section>}
+        {businessType === "sports_turf" && <section className="sports-hero" id="home" aria-labelledby="business-title">
+          {heroPhoto}<div className="sports-hero-card"><p className="public-eyebrow">{getBusinessTypeLabel(businessType)}{business?.location ? ` · ${business.location}` : ""}</p><h1 id="business-title">{businessCopy.title}</h1><p>{businessCopy.intro}</p><button className="editorial-button" type="button" onClick={() => jumpTo("services")}>{businessCopy.action}<span>↓</span></button></div>
+          <span className="sports-hero-tag">PLAY YOUR GAME</span>
+        </section>}
 
-        <div className="editorial-divider" aria-hidden="true"><span />A moment for yourself<span /></div>
+        <div className="editorial-divider" aria-hidden="true"><span />{business?.business_type === "restaurant" ? "Made for sharing" : business?.business_type === "sports_turf" ? "Find your next game" : "A moment for yourself"}<span /></div>
 
         <section className="editorial-section services-section" id="services" aria-labelledby="services-title">
           <div className="section-heading">
-            <div><p className="public-eyebrow">THE MENU</p><h2 id="services-title">Choose your <em>experience</em></h2></div>
-            <p>Find the service that feels right, then select a time from the live availability.</p>
+            <div><p className="public-eyebrow">{businessCopy.item.toUpperCase()}</p><h2 id="services-title">{businessCopy.services}</h2></div>
+            <p>{businessCopy.serviceNote}</p>
           </div>
-          {services.length === 0 ? <div className="empty-services"><span className="empty-service-mark" aria-hidden="true">✳</span><h3>No services are available right now</h3><p>Please contact {businessName} for more information.</p></div> : (
-            <div className="editorial-service-list">
+          {services.length === 0 ? <div className="empty-services"><span className="empty-service-mark" aria-hidden="true">✳</span><h3>No {businessCopy.item.toLowerCase()} are available right now</h3><p>Please contact {businessName} for more information.</p></div> : (
+            <div className={`editorial-service-list service-template-${templateGroup}`}>
               {services.map((service, index) => {
                 const price = formatPrice(service.price);
                 return <article className={`editorial-service ${selectedService?.id === service.id ? "is-selected" : ""}`} key={service.id}>
@@ -282,7 +326,7 @@ function PublicBooking() {
                     </div>
                   </div>
                   <button className="service-select" type="button" aria-pressed={selectedService?.id === service.id} onClick={() => chooseService(service)}>
-                    {selectedService?.id === service.id ? "Selected" : "Select service"}<span aria-hidden="true">↗</span>
+                    {selectedService?.id === service.id ? "Selected" : `Select ${businessCopy.step.toLowerCase()}`}<span aria-hidden="true">↗</span>
                   </button>
                 </article>;
               })}
@@ -307,11 +351,11 @@ function PublicBooking() {
 
         <section className="appointment-section" id="appointment" aria-labelledby="appointment-title">
           <div className="appointment-intro">
-            <p className="public-eyebrow">YOUR VISIT</p>
-            <h2 id="appointment-title">Make it <em>yours.</em></h2>
-            <p>Select a service, date, and available time. Your booking is submitted directly to {businessName}.</p>
+            <p className="public-eyebrow">{businessCopy.step.toUpperCase()}</p>
+            <h2 id="appointment-title">{businessCopy.booking}</h2>
+            <p>Select what you need, then choose a date and available time. Your request goes directly to {businessName}.</p>
             <ol className="booking-steps" aria-label="Booking progress">
-              <li className={selectedService ? "step-done" : "step-current"}>Service</li>
+              <li className={selectedService ? "step-done" : "step-current"}>{businessCopy.step}</li>
               <li className={selectedDate ? "step-done" : selectedService ? "step-current" : ""}>Date</li>
               <li className={selectedSlot ? "step-done" : selectedDate ? "step-current" : ""}>Time</li>
               <li className={customerName && customerPhone ? "step-done" : selectedSlot ? "step-current" : ""}>Details</li>
@@ -335,7 +379,7 @@ function PublicBooking() {
               {!selectedService && <div className="booking-empty-state"><span>First</span><p>Choose a service above to begin your booking.</p></div>}
               {selectedService && <>
                 <div className="selected-service-summary">
-                  <div><span className="summary-label">SELECTED SERVICE</span><strong>{selectedService.name}</strong></div>
+                <div><span className="summary-label">SELECTED {businessCopy.step.toUpperCase()}</span><strong>{selectedService.name}</strong></div>
                   <button type="button" onClick={() => { setSelectedService(null); setSelectedDate(""); setSelectedSlot(""); }}>Change</button>
                 </div>
                 <div className="date-field">
@@ -359,7 +403,7 @@ function PublicBooking() {
                 <label htmlFor="customer-phone">Phone number<input id="customer-phone" name="tel" type="tel" autoComplete="tel" value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} required /></label>
                 <div className="booking-recap"><span>{selectedService.name}</span><span>{new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · {selectedSlot}</span>{formatPrice(selectedService.price) && <strong>{formatPrice(selectedService.price)}</strong>}</div>
                 {bookingError && <p className="booking-error" role="alert">{bookingError}</p>}
-                <button className="editorial-button submit-booking" type="submit" disabled={bookingLoading}>{bookingLoading ? "Reserving your time…" : "Confirm appointment"}<span aria-hidden="true">↗</span></button>
+                <button className="editorial-button submit-booking" type="submit" disabled={bookingLoading}>{bookingLoading ? "Saving your booking…" : businessCopy.action}<span aria-hidden="true">↗</span></button>
                 <p className="form-privacy-note">Your details are used to manage this appointment.</p>
               </form>}
             </>}
@@ -378,9 +422,13 @@ function PublicBooking() {
       </div>
 
       <footer className="public-footer">
-        <a className="public-brand footer-brand" href="#home"><span className="brand-mark" aria-hidden="true">{businessName.charAt(0)}</span><span>{businessName}</span></a>
+        <a className="public-brand footer-brand" href="#home">{business?.logo_image ? <img className="public-logo" src={business.logo_image} alt="" /> : <span className="brand-mark" aria-hidden="true">{businessName.charAt(0)}</span>}<span>{businessName}</span></a>
         <p>{getBusinessTypeLabel(business?.business_type)} · Online appointments</p>
-        <div className="footer-links"><a href="#services">Services</a><a href="#about">About</a><a href="#contact">Contact</a>{business?.contact_phone && <a href={`tel:${business.contact_phone}`}>Call</a>}</div>
+        <div className="footer-links"><a href="#services">Services</a><a href="#about">About</a><a href="#contact">Contact</a>{business?.contact_phone && <a href={`tel:${business.contact_phone}`}>Call</a>}
+          {instagramUrl && <a href={instagramUrl} target="_blank" rel="noreferrer">Instagram</a>}
+          {whatsappLink && <a href={whatsappLink} target="_blank" rel="noreferrer">WhatsApp</a>}
+          {facebookUrl && <a href={facebookUrl} target="_blank" rel="noreferrer">Facebook</a>}
+        </div>
         <a className="back-to-top" href="#home">Back to top ↑</a>
       </footer>
     </main>

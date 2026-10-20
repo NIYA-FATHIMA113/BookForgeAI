@@ -578,6 +578,9 @@ class AIConfirmSetupView(APIView):
                 request.user,
                 configuration.services,
                 request.data.get("website_style", "auto"),
+                request.data.get("website_font", "classic"),
+                request.data.get("business_name_font", "editorial"),
+                request.data.get("website_template", "auto"),
             )
 
         except ValueError as e:
@@ -616,6 +619,9 @@ class AIConfirmSetupView(APIView):
                 "business_name": tenant.business_name,
                 "slug": tenant.slug,
                 "website_style": tenant.website_style,
+                "website_font": tenant.website_font,
+                "business_name_font": tenant.business_name_font,
+                "website_template": tenant.website_template,
                 "public_url": f"/book/{tenant.slug}",
             },
             status=status.HTTP_201_CREATED,
@@ -806,6 +812,9 @@ class AIConfirmSetupView(APIView):
                 request.user,
                 configuration.services,
                 request.data.get("website_style", "auto"),
+                request.data.get("website_font", "classic"),
+                request.data.get("business_name_font", "editorial"),
+                request.data.get("website_template", "auto"),
             )
 
         except ValueError as e:
@@ -844,6 +853,9 @@ class AIConfirmSetupView(APIView):
                 "business_name": tenant.business_name,
                 "slug": tenant.slug,
                 "website_style": tenant.website_style,
+                "website_font": tenant.website_font,
+                "business_name_font": tenant.business_name_font,
+                "website_template": tenant.website_template,
                 "public_url": f"/book/{tenant.slug}",
             },
             status=status.HTTP_201_CREATED,

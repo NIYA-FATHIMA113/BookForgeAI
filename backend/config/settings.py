@@ -198,6 +198,9 @@ if not DEBUG:
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "BookForge AI API",

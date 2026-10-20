@@ -7,7 +7,47 @@ import BusinessHours from "../components/BusinessHours";
 import BookingSection from "../components/BookingSection";
 import OwnerNavigation from "../components/OwnerNavigation";
 import { apiRequest } from "../services/api";
+import { templatesForBusiness } from "../constants/websiteTemplates";
 import "./BusinessManagement.css";
+
+function ImagePicker({ title, help, currentImage, currentAlt, onSelect }) {
+  const [fileName, setFileName] = useState("");
+  const [resolutionMessage, setResolutionMessage] = useState("");
+  return <div className="image-picker-field">
+    <span className="image-picker-title">{title}</span>
+    <label className="custom-image-picker">
+      <span className="custom-image-picker-button">Choose image</span>
+      <span className="custom-image-picker-name">{fileName || "No new image selected"}</span>
+      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => {
+        const file = event.target.files?.[0] || null;
+        setFileName(file?.name || "");
+        onSelect(file);
+        setResolutionMessage("");
+        if (file) {
+          const image = new Image();
+          const previewUrl = URL.createObjectURL(file);
+          image.onload = () => {
+            const minimum = title === "Logo" ? [512, 512] : [1200, 675];
+            if (image.naturalWidth < minimum[0] || image.naturalHeight < minimum[1]) {
+              setResolutionMessage(`This image is ${image.naturalWidth} × ${image.naturalHeight} px. A larger image will look sharper (at least ${minimum[0]} × ${minimum[1]} px recommended).`);
+            } else {
+              setResolutionMessage(`Image resolution: ${image.naturalWidth} × ${image.naturalHeight} px.`);
+            }
+            URL.revokeObjectURL(previewUrl);
+          };
+          image.onerror = () => {
+            setResolutionMessage("We couldn’t read this image. Try a JPG, PNG, or WebP file.");
+            URL.revokeObjectURL(previewUrl);
+          };
+          image.src = previewUrl;
+        }
+      }} />
+    </label>
+    <small className="image-recommendation">{help}</small>
+    {resolutionMessage && <small className={`image-resolution-message ${resolutionMessage.startsWith("This image") ? "is-low-resolution" : ""}`} aria-live="polite">{resolutionMessage}</small>}
+    {currentImage && <img className={`manage-image-preview ${title === "Logo" ? "logo-preview" : ""}`} src={currentImage} alt={currentAlt} />}
+  </div>;
+}
 
 function BusinessManagement() {
   const { tenantId } = useParams();
@@ -23,7 +63,16 @@ function BusinessManagement() {
     location: "",
     contact_phone: "",
     contact_email: "",
+    website_style: "auto",
+    website_template: "auto",
+    website_font: "classic",
+    business_name_font: "editorial",
+    instagram_handle: "",
+    whatsapp_number: "",
+    facebook_id: "",
   });
+  const [logoFile, setLogoFile] = useState(null);
+  const [heroFile, setHeroFile] = useState(null);
 
   useEffect(() => {
     apiRequest(`/api/tenants/${tenantId}/`)
@@ -35,6 +84,13 @@ function BusinessManagement() {
           location: data.location || "",
           contact_phone: data.contact_phone || "",
           contact_email: data.contact_email || "",
+          website_style: data.website_style || "auto",
+          website_template: data.website_template || "auto",
+          website_font: data.website_font || "classic",
+          business_name_font: data.business_name_font || "editorial",
+          instagram_handle: data.instagram_handle || "",
+          whatsapp_number: data.whatsapp_number || "",
+          facebook_id: data.facebook_id || "",
         });
       })
       .catch((err) => setError(err.message || "Unable to load this business."));
@@ -42,7 +98,11 @@ function BusinessManagement() {
 
   const updateField = (event) => {
     const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === "business_type" ? { website_template: "auto" } : {}),
+    }));
   };
 
   const saveBusiness = async (event) => {
@@ -50,11 +110,17 @@ function BusinessManagement() {
     try {
       setSaving(true);
       setError("");
+      const body = new FormData();
+      Object.entries(form).forEach(([key, value]) => body.append(key, value));
+      if (logoFile) body.append("logo_image", logoFile);
+      if (heroFile) body.append("hero_image", heroFile);
       const updated = await apiRequest(`/api/tenants/${tenantId}/`, {
         method: "PATCH",
-        body: JSON.stringify(form),
+        body,
       });
       setBusiness(updated);
+      setLogoFile(null);
+      setHeroFile(null);
       setEditing(false);
     } catch (err) {
       setError(err.message || "Unable to update this business.");
@@ -117,6 +183,16 @@ function BusinessManagement() {
             <label>Location<input name="location" value={form.location} onChange={updateField} /></label>
             <label>Contact phone<input name="contact_phone" value={form.contact_phone} onChange={updateField} /></label>
             <label>Contact email<input name="contact_email" type="email" value={form.contact_email} onChange={updateField} /></label>
+            <label>Website look<select name="website_style" value={form.website_style} onChange={updateField}><option value="auto">Match business type</option><option value="modern">Modern & minimal</option><option value="warm">Warm & welcoming</option><option value="bold">Bold & energetic</option><option value="elegant">Elegant & premium</option><option value="nature">Natural & relaxed</option><option value="3d">3D motion</option><option value="illustrated">Illustrated</option><option value="playful">Cartoon pop</option></select></label>
+            <label>Website template<select name="website_template" value={form.website_template} onChange={updateField}><option value="auto">Default for my business type</option>{templatesForBusiness(form.business_type).map(([value, title]) => <option key={value} value={value}>{title}</option>)}</select><small>Choose from layouts made for this business type.</small></label>
+            <label>Website font<select name="website_font" value={form.website_font} onChange={updateField}><option value="classic">Classic serif</option><option value="modern">Modern sans serif</option><option value="friendly">Friendly rounded</option><option value="editorial">Editorial display</option><option value="mono">Minimal mono</option></select><small>The preview on your public site updates after saving.</small></label>
+            <label>Business name font<select name="business_name_font" value={form.business_name_font} onChange={updateField}><option value="classic">Classic serif</option><option value="modern">Modern sans serif</option><option value="friendly">Friendly rounded</option><option value="editorial">Editorial display</option><option value="mono">Minimal mono</option></select><small>Choose how your business name appears in the site header and footer.</small></label>
+            <div className={`business-name-font-preview name-font-${form.business_name_font}`}><small>BUSINESS NAME PREVIEW</small><strong>{form.business_name || business?.business_name || "Your business"}</strong></div>
+            <label>Instagram username<input name="instagram_handle" value={form.instagram_handle} onChange={updateField} placeholder="@yourbusiness" /></label>
+            <label>WhatsApp number<input name="whatsapp_number" type="tel" value={form.whatsapp_number} onChange={updateField} placeholder="+91 98765 43210" /></label>
+            <label>Facebook page ID or link<input name="facebook_id" value={form.facebook_id} onChange={updateField} placeholder="Your page name, ID, or URL" /></label>
+            <ImagePicker title="Logo" help="Square image recommended: 512 × 512 px. PNG or WebP works well." currentImage={business?.logo_image} currentAlt="Current business logo" onSelect={setLogoFile} />
+            <ImagePicker title="Website photo" help="Landscape image recommended: 1600 × 900 px (16:9). Use a sharp original photo for best results." currentImage={business?.hero_image} currentAlt="Current website hero photo" onSelect={setHeroFile} />
             <div className="manage-business-form-actions"><button className="manage-cancel-button" type="button" onClick={() => setEditing(false)}>Cancel</button><button className="manage-save-button" type="submit" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
           </form>
         </section>}

@@ -45,12 +45,13 @@ export async function apiRequest(
   let token = localStorage.getItem("access_token");
 
   const makeRequest = (accessToken) => {
+    const isFormData = options.body instanceof FormData;
     return fetch(
       `${API_BASE_URL}${endpoint}`,
       {
         ...options,
         headers: {
-          "Content-Type": "application/json",
+          ...(isFormData ? {} : { "Content-Type": "application/json" }),
 
           ...(accessToken
             ? {

@@ -31,6 +31,21 @@
 .manage-business-form input, .manage-business-form select { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; color: #111827; font: inherit; font-size: 13px; outline: none; }
 .manage-business-form input:focus, .manage-business-form select:focus { border-color: #6b7280; box-shadow: 0 0 0 3px rgba(17, 24, 39, .07); }
 .manage-business-form-actions { display: flex; justify-content: flex-end; grid-column: 1 / -1; gap: 9px; padding-top: 4px; }
+.manage-image-preview { display: block; width: 100%; max-width: 260px; max-height: 145px; object-fit: cover; border-radius: 8px; }
+.manage-image-preview.logo-preview { width: 72px; height: 72px; object-fit: contain; background: #f3f4f6; }
+.image-picker-field { display: grid; align-content: start; gap: 8px; min-width: 0; }
+.image-picker-title { color: #374151; font-size: 12px; font-weight: 600; }
+.custom-image-picker { display: flex; align-items: center; gap: 11px; min-height: 46px; padding: 5px 11px 5px 5px; border: 1px solid #dfe3e8; border-radius: 9px; background: #f9fafb; cursor: pointer; }
+.manage-business-form .custom-image-picker { display: flex; align-items: center; }
+.custom-image-picker:hover { border-color: #9ca3af; background: #f3f4f6; }
+.custom-image-picker:focus-within { outline: 3px solid rgba(17, 24, 39, .12); outline-offset: 2px; }
+.custom-image-picker-button { display: inline-flex; align-items: center; min-height: 34px; padding: 0 13px; border-radius: 6px; background: #172b27; color: #fff; font-size: 11px; font-weight: 700; }
+.custom-image-picker-name { overflow: hidden; color: #667085; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.custom-image-picker input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap; }
+.manage-business-form .custom-image-picker input { width: 1px; min-height: 1px; padding: 0; border: 0; }
+.image-recommendation { color: #667085; font-size: 11px; font-weight: 400; line-height: 1.55; }
+.image-resolution-message { color: #067647; font-size: 11px; font-weight: 500; line-height: 1.5; }
+.image-resolution-message.is-low-resolution { color: #b54708; }
 .manage-business-form-actions .manage-save-button { border-color: #111827; background: #111827; color: #fff; }
 .manage-business-form-actions .manage-save-button:hover { background: #1f2937; }
 .manage-business-form-actions button:disabled { cursor: wait; opacity: .6; }

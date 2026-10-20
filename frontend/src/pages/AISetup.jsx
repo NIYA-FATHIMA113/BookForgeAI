@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../services/api";
 import ReactMarkdown from "react-markdown";
+import { normalizeBusinessType, templatesForBusiness } from "../constants/websiteTemplates";
 
 function AISetup() {
   const navigate = useNavigate();
@@ -10,6 +11,9 @@ function AISetup() {
   const [messages, setMessages] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [websiteStyle, setWebsiteStyle] = useState("auto");
+  const [websiteTemplate, setWebsiteTemplate] = useState("auto");
+  const [websiteFont, setWebsiteFont] = useState("classic");
+  const [businessNameFont, setBusinessNameFont] = useState("editorial");
 
  
   const [business, setBusiness] = useState({
@@ -92,6 +96,11 @@ function AISetup() {
     // Update preview data from real configuration
     if (data.business_configuration) {
       const config = data.business_configuration;
+      if (config.business_type) {
+        const normalizedType = normalizeBusinessType(config.business_type);
+        const templatePrefix = normalizedType === "sports_turf" ? "sports" : normalizedType;
+        setWebsiteTemplate((current) => current === "auto" || current.startsWith(`${templatePrefix}_`) ? current : "auto");
+      }
 
       setBusiness((current) => ({
         ...current,
@@ -215,6 +224,9 @@ const handleConfirm = async () => {
       body: JSON.stringify({
         conversation_id: conversationId,
         website_style: websiteStyle,
+        website_template: websiteTemplate,
+        website_font: websiteFont,
+        business_name_font: businessNameFont,
         services: services.map(({ name, duration, price }) => ({
           name: name.trim(),
           duration_minutes: Number(duration),
@@ -791,7 +803,36 @@ const handleConfirm = async () => {
                 </label>
               ))}
             </div>
-            <div className={`website-style-live-preview theme-${previewTheme}`} aria-live="polite">
+            <div className="website-template-picker">
+              <h4>Choose a page layout</h4>
+              <p>Choose one of the layouts designed for {business.type || "your business type"}.</p>
+              <div className="website-template-options" role="radiogroup" aria-label="Website template">
+                <label className={`website-template-option ${websiteTemplate === "auto" ? "selected" : ""}`}>
+                  <input type="radio" name="website-template" value="auto" checked={websiteTemplate === "auto"} onChange={() => setWebsiteTemplate("auto")} />
+                  <span className="website-template-art template-art-auto" aria-hidden="true"><i /><i /><b /></span>
+                  <strong>Default layout</strong><small>Use the recommended layout for this business.</small>
+                </label>
+                {templatesForBusiness(business.type).map(([value, title, description]) => <label className={`website-template-option ${websiteTemplate === value ? "selected" : ""}`} key={value}>
+                  <input type="radio" name="website-template" value={value} checked={websiteTemplate === value} onChange={() => setWebsiteTemplate(value)} />
+                  <span className={`website-template-art template-art-${value}`} aria-hidden="true"><i /><i /><b /></span>
+                  <strong>{title}</strong><small>{description}</small>
+                </label>)}
+              </div>
+            </div>
+            <label className="website-font-select">Website font
+              <select value={websiteFont} onChange={(event) => setWebsiteFont(event.target.value)}>
+                <option value="classic">Classic serif</option><option value="modern">Modern sans serif</option><option value="friendly">Friendly rounded</option><option value="editorial">Editorial display</option><option value="mono">Minimal mono</option>
+              </select>
+              <small>Choose the lettering used on your public website.</small>
+            </label>
+            <label className="website-font-select">Business name font
+              <select value={businessNameFont} onChange={(event) => setBusinessNameFont(event.target.value)}>
+                <option value="classic">Classic serif</option><option value="modern">Modern sans serif</option><option value="friendly">Friendly rounded</option><option value="editorial">Editorial display</option><option value="mono">Minimal mono</option>
+              </select>
+              <small>Preview the lettering used for your business name.</small>
+              <strong className={`business-name-preview name-font-${businessNameFont}`}>{business.name || "Your business"}</strong>
+            </label>
+            <div className={`website-style-live-preview theme-${previewTheme} font-${websiteFont}`} data-template={websiteTemplate} aria-live="polite">
               <div className="style-preview-window">
                 <div className="style-preview-top"><i /><i /><i /><span>BOOK A VISIT</span></div>
                 <div className="style-preview-scene"><small>WELCOME TO</small><strong>{business.name || "Your business"}</strong><span>Find a time that works for you</span><b>Explore services</b></div>
