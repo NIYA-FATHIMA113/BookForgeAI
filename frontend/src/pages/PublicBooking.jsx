@@ -1,9 +1,11 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { templatesForBusiness } from "../constants/websiteTemplates";
+import ImageWithFallback from "../components/ImageWithFallback";
+import { API_BASE_URL } from "../services/api";
+import { resolveImageUrl } from "../utils/imageUrls";
 import "./PublicBooking.css";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const EDITORIAL_PHOTOS = {
@@ -186,6 +188,7 @@ function PublicBooking() {
   const photo = business?.hero_image
     ? { src: business.hero_image, alt: `Photo provided by ${businessName}`, credit: null, href: null }
     : EDITORIAL_PHOTOS[business?.business_type] || null;
+  const photoSource = resolveImageUrl(photo?.src, { apiBaseUrl: API_BASE_URL, pageProtocol: window.location.protocol });
   const businessCopy = getBusinessCopy(business?.business_type);
   const businessType = business?.business_type || "salon";
   const isRestaurant = businessType === "restaurant";
@@ -211,8 +214,14 @@ function PublicBooking() {
   const hasBusinessHours = (business?.business_hours || []).length > 0;
 
   const heroPhoto = <div className="template-photo">
-    {photo && !heroImageFailed ? <img src={photo.src} alt={photo.alt} fetchPriority="high" onError={() => setHeroImageFailed(true)} /> : <div className="hero-image-fallback" aria-hidden="true"><span>{business?.business_type === "clinic" ? "A considered space for your visit" : business?.business_type === "restaurant" ? "A table, made for you" : "Make room for a little care"}</span></div>}
-    {photo?.credit && !heroImageFailed && <a className="photo-credit" href={photo.href} target="_blank" rel="noreferrer">Photo by {photo.credit} · Unsplash</a>}
+    <ImageWithFallback
+      src={photoSource}
+      alt={photo?.alt || ""}
+      fetchPriority="high"
+      onImageError={() => setHeroImageFailed(true)}
+      fallback={<div className="hero-image-fallback" aria-hidden="true"><span>{business?.business_type === "clinic" ? "A considered space for your visit" : business?.business_type === "restaurant" ? "A table, made for you" : "Make room for a little care"}</span></div>}
+    />
+    {photo?.credit && photoSource && !heroImageFailed && <a className="photo-credit" href={photo.href} target="_blank" rel="noreferrer">Photo by {photo.credit} · Unsplash</a>}
   </div>;
 
   const jumpTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -282,7 +291,7 @@ function PublicBooking() {
       <a className="skip-link" href="#main-content">Skip to content</a>
       <nav className="public-nav" aria-label="Main navigation">
         <a className="public-brand" href="#home" aria-label={`${businessName}, home`}>
-          {business?.logo_image ? <img className="public-logo" src={business.logo_image} alt="" /> : <span className="brand-mark" aria-hidden="true">{businessName.charAt(0)}</span>}
+          <ImageWithFallback className="public-logo" src={business?.logo_image} alt="" fallback={<span className="brand-mark" aria-hidden="true">{businessName.charAt(0)}</span>} />
           <span>{businessName}</span>
         </a>
         <div className="public-nav-links">
@@ -441,7 +450,7 @@ function PublicBooking() {
       </div>
 
       <footer className="public-footer">
-        <a className="public-brand footer-brand" href="#home">{business?.logo_image ? <img className="public-logo" src={business.logo_image} alt="" /> : <span className="brand-mark" aria-hidden="true">{businessName.charAt(0)}</span>}<span>{businessName}</span></a>
+        <a className="public-brand footer-brand" href="#home"><ImageWithFallback className="public-logo" src={business?.logo_image} alt="" fallback={<span className="brand-mark" aria-hidden="true">{businessName.charAt(0)}</span>} /><span>{businessName}</span></a>
         <p>{getBusinessTypeLabel(business?.business_type)} · Online appointments</p>
         <div className="footer-links"><a href="#services">Services</a><a href="#about">About</a><a href="#contact">Contact</a>{business?.contact_phone && <a href={`tel:${business.contact_phone}`}>Call</a>}
           {instagramUrl && <a href={instagramUrl} target="_blank" rel="noreferrer">Instagram</a>}

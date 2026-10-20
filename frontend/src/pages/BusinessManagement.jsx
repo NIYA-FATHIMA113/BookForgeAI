@@ -5,6 +5,7 @@ import ServiceList from "../components/ServiceList";
 import Resources from "./Resources";
 import BusinessHours from "../components/BusinessHours";
 import BookingSection from "../components/BookingSection";
+import ImageWithFallback from "../components/ImageWithFallback";
 import OwnerNavigation from "../components/OwnerNavigation";
 import { apiRequest } from "../services/api";
 import { templatesForBusiness } from "../constants/websiteTemplates";
@@ -45,7 +46,7 @@ function ImagePicker({ title, help, currentImage, currentAlt, onSelect }) {
     </label>
     <small className="image-recommendation">{help}</small>
     {resolutionMessage && <small className={`image-resolution-message ${resolutionMessage.startsWith("This image") ? "is-low-resolution" : ""}`} aria-live="polite">{resolutionMessage}</small>}
-    {currentImage && <img className={`manage-image-preview ${title === "Logo" ? "logo-preview" : ""}`} src={currentImage} alt={currentAlt} />}
+    {currentImage && <ImageWithFallback className={`manage-image-preview ${title === "Logo" ? "logo-preview" : ""}`} src={currentImage} alt={currentAlt} fallback={<div className={`manage-image-fallback ${title === "Logo" ? "logo-preview" : ""}`}>Image unavailable</div>} />}
   </div>;
 }
 
