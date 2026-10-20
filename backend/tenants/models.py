@@ -79,6 +79,7 @@ class Tenant(models.Model):
     website_template = models.CharField(max_length=30, choices=WEBSITE_TEMPLATES, default="auto")
     website_font = models.CharField(max_length=20, choices=WEBSITE_FONTS, default="classic")
     business_name_font = models.CharField(max_length=20, choices=WEBSITE_FONTS, default="editorial")
+    business_name_size = models.PositiveSmallIntegerField(default=24)
 
     logo_image = models.ImageField(upload_to="businesses/logos/", blank=True, null=True)
     hero_image = models.ImageField(upload_to="businesses/hero/", blank=True, null=True)

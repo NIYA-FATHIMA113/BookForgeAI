@@ -32,6 +32,7 @@
 .manage-business-form input:focus, .manage-business-form select:focus { border-color: #6b7280; box-shadow: 0 0 0 3px rgba(17, 24, 39, .07); }
 .manage-business-form-actions { display: flex; justify-content: flex-end; grid-column: 1 / -1; gap: 9px; padding-top: 4px; }
 .manage-image-preview { display: block; width: 100%; max-width: 260px; max-height: 145px; object-fit: cover; border-radius: 8px; }
+.business-name-size-control input[type="range"] { min-height: 24px; padding: 0; accent-color: #176b5b; cursor: pointer; }
 .manage-image-preview.logo-preview { width: 72px; height: 72px; object-fit: contain; background: #f3f4f6; }
 .manage-image-fallback { display: grid; width: 100%; max-width: 260px; min-height: 110px; place-items: center; border: 1px dashed #d0d8d4; border-radius: 8px; background: linear-gradient(145deg, #f5f8f5, #e9efeb); color: #65746d; font-size: 12px; }
 .manage-image-fallback.logo-preview { width: 72px; min-height: 72px; border-radius: 50%; font-size: 0; }

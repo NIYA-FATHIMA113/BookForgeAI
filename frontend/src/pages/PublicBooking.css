@@ -489,6 +489,8 @@
 .name-font-editorial { font-family: "Palatino Linotype", Palatino, Georgia, serif; font-style: italic; }
 .public-booking[data-name-font="mono"] .public-brand > span:last-child,
 .name-font-mono { font-family: "Courier New", monospace; letter-spacing: -.06em; }
+.public-booking .public-brand > span:last-child { font-size: clamp(14px, var(--business-name-size, 24px), 48px); font-weight: 650; line-height: 1.08; }
+.public-booking .footer-brand > span:last-child { font-size: clamp(14px, calc(var(--business-name-size, 24px) * .8), 38px); }
 .business-name-font-preview { display: grid; align-content: start; gap: 8px; min-height: 78px; padding: 13px; border: 1px dashed #d0d5dd; border-radius: 8px; background: #f9fafb; }
 .business-name-font-preview small { color: #667085; font: 700 9px Arial, sans-serif; letter-spacing: .12em; }
 .business-name-font-preview strong { overflow-wrap: anywhere; color: #172b27; font-size: 20px; font-weight: 600; }

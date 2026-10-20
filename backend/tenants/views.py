@@ -28,6 +28,7 @@ class PublicTenantDetailView(APIView):
             "website_template": tenant.website_template,
             "website_font": tenant.website_font,
             "business_name_font": tenant.business_name_font,
+            "business_name_size": tenant.business_name_size,
             "logo_image": public_image_url(request, tenant.logo_image, tenant.logo_image_external_url),
             "hero_image": public_image_url(request, tenant.hero_image, tenant.hero_image_external_url),
             "instagram_handle": tenant.instagram_handle,

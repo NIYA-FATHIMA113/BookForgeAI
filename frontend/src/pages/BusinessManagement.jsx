@@ -88,6 +88,7 @@ function BusinessManagement() {
     website_template: "auto",
     website_font: "classic",
     business_name_font: "editorial",
+    business_name_size: "24",
     instagram_handle: "",
     whatsapp_number: "",
     facebook_id: "",
@@ -111,6 +112,7 @@ function BusinessManagement() {
           website_template: data.website_template || "auto",
           website_font: data.website_font || "classic",
           business_name_font: data.business_name_font || "editorial",
+          business_name_size: String(data.business_name_size || 24),
           instagram_handle: data.instagram_handle || "",
           whatsapp_number: data.whatsapp_number || "",
           facebook_id: data.facebook_id || "",
@@ -217,7 +219,8 @@ function BusinessManagement() {
             <label>Website template<select name="website_template" value={form.website_template} onChange={updateField}><option value="auto">Default for my business type</option>{templatesForBusiness(form.business_type).map(([value, title]) => <option key={value} value={value}>{title}</option>)}</select><small>Choose from layouts made for this business type.</small></label>
             <label>Website font<select name="website_font" value={form.website_font} onChange={updateField}><option value="classic">Classic serif</option><option value="modern">Modern sans serif</option><option value="friendly">Friendly rounded</option><option value="editorial">Editorial display</option><option value="mono">Minimal mono</option></select><small>The preview on your public site updates after saving.</small></label>
             <label>Business name font<select name="business_name_font" value={form.business_name_font} onChange={updateField}><option value="classic">Classic serif</option><option value="modern">Modern sans serif</option><option value="friendly">Friendly rounded</option><option value="editorial">Editorial display</option><option value="mono">Minimal mono</option></select><small>Choose how your business name appears in the site header and footer.</small></label>
-            <div className={`business-name-font-preview name-font-${form.business_name_font}`}><small>BUSINESS NAME PREVIEW</small><strong>{form.business_name || business?.business_name || "Your business"}</strong></div>
+            <label className="business-name-size-control">Business name size: {form.business_name_size}px<input name="business_name_size" type="range" min="16" max="48" step="1" value={form.business_name_size} onChange={updateField} /><small>Adjust the name size in the public website header and footer.</small></label>
+            <div className={`business-name-font-preview name-font-${form.business_name_font}`}><small>BUSINESS NAME PREVIEW</small><strong style={{ fontSize: `${form.business_name_size}px` }}>{form.business_name || business?.business_name || "Your business"}</strong></div>
             <label>Instagram username<input name="instagram_handle" value={form.instagram_handle} onChange={updateField} placeholder="@yourbusiness" /></label>
             <label>WhatsApp number<input name="whatsapp_number" type="tel" value={form.whatsapp_number} onChange={updateField} placeholder="+91 98765 43210" /></label>
             <label>Facebook page ID or link<input name="facebook_id" value={form.facebook_id} onChange={updateField} placeholder="Your page name, ID, or URL" /></label>

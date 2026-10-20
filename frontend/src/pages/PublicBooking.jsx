@@ -292,7 +292,7 @@ function PublicBooking() {
   }
 
   return (
-    <main className="public-booking" data-theme={theme} data-business-type={businessType} data-template={templateLabel} data-font={business?.website_font || "classic"} data-name-font={business?.business_name_font || "editorial"}>
+    <main className="public-booking" data-theme={theme} data-business-type={businessType} data-template={templateLabel} data-font={business?.website_font || "classic"} data-name-font={business?.business_name_font || "editorial"} style={{ "--business-name-size": `${business?.business_name_size || 24}px` }}>
       <a className="skip-link" href="#main-content">Skip to content</a>
       <nav className="public-nav" aria-label="Main navigation">
         <a className="public-brand" href="#home" aria-label={`${businessName}, home`}>

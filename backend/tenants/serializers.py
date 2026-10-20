@@ -47,6 +47,7 @@ class TenantSerializer(serializers.ModelSerializer):
             "website_template",
             "website_font",
             "business_name_font",
+            "business_name_size",
             "logo_image",
             "hero_image",
             "logo_image_external_url",
@@ -85,6 +86,11 @@ class TenantSerializer(serializers.ModelSerializer):
                 "Booking deposit cannot be negative."
             )
 
+        return value
+
+    def validate_business_name_size(self, value):
+        if not 16 <= value <= 48:
+            raise serializers.ValidationError("Business name size must be between 16 and 48 pixels.")
         return value
 
     def validate_logo_image(self, value):
