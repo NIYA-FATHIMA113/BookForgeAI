@@ -1,3 +1,4 @@
+from io import BytesIO
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -5,6 +6,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.test import RequestFactory
+from PIL import Image
 from rest_framework.test import APIClient
 
 from .media_urls import public_image_url
@@ -75,6 +77,29 @@ class TenantMediaApiTests(TestCase):
         serializer = TenantSerializer(self.tenant, data={"logo_image": invalid}, partial=True)
         self.assertFalse(serializer.is_valid())
         self.assertIn("logo_image", serializer.errors)
+
+    def test_multipart_upload_persists_storage_reference_and_returns_absolute_url(self):
+        image_bytes = BytesIO()
+        Image.new("RGB", (1600, 900), color=(45, 80, 60)).save(image_bytes, format="JPEG")
+        upload = SimpleUploadedFile(
+            "website-photo.jpg", image_bytes.getvalue(), content_type="image/jpeg"
+        )
+        self.client.force_authenticate(user=self.owner)
+        storage = Tenant._meta.get_field("hero_image").storage
+        cdn_url = "https://cdn.example.test/persisted/website-photo.jpg"
+
+        with patch.object(storage, "save", return_value="businesses/hero/website-photo.jpg"), \
+                patch.object(storage, "url", return_value=cdn_url):
+            response = self.client.patch(
+                f"/api/tenants/{self.tenant.pk}/",
+                {"hero_image": upload},
+                format="multipart",
+            )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["hero_image"], cdn_url)
+        self.tenant.refresh_from_db()
+        self.assertEqual(self.tenant.hero_image.name, "businesses/hero/website-photo.jpg")
 
         oversized = SimpleUploadedFile(
             "oversized.png", b"x" * (MAX_BUSINESS_IMAGE_SIZE + 1), content_type="image/png"

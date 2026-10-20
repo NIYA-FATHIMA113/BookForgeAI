@@ -1,3 +1,5 @@
+import { getApiErrorMessage } from "../utils/apiErrorMessage";
+
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 async function refreshAccessToken() {
@@ -92,12 +94,7 @@ export async function apiRequest(
     const errorData =
       await response.json().catch(() => ({}));
 
-    throw new Error(
-      errorData.detail ||
-        errorData.error ||
-        errorData.message ||
-        `Request failed with status ${response.status}`
-    );
+    throw new Error(getApiErrorMessage(errorData, response.status));
   }
 
   // Some DELETE endpoints return 204 No Content

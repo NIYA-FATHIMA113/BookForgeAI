@@ -9,44 +9,64 @@ import ImageWithFallback from "../components/ImageWithFallback";
 import OwnerNavigation from "../components/OwnerNavigation";
 import { apiRequest } from "../services/api";
 import { templatesForBusiness } from "../constants/websiteTemplates";
+import { createObjectUrlPreview } from "../utils/objectUrlPreview";
 import "./BusinessManagement.css";
 
-function ImagePicker({ title, help, currentImage, currentAlt, onSelect }) {
-  const [fileName, setFileName] = useState("");
+function ImagePicker({ title, help, currentImage, currentAlt, selectedFile, onSelect }) {
+  const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
+  const [localPreviewFailed, setLocalPreviewFailed] = useState(false);
   const [resolutionMessage, setResolutionMessage] = useState("");
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setLocalPreviewUrl(null);
+      setResolutionMessage("");
+      return undefined;
+    }
+
+    let preview;
+    try {
+      preview = createObjectUrlPreview(selectedFile);
+    } catch {
+      setLocalPreviewUrl(null);
+      setResolutionMessage("This image could not be previewed. Try a JPG, PNG, or WebP file.");
+      return undefined;
+    }
+
+    setLocalPreviewUrl(preview.url);
+    setLocalPreviewFailed(false);
+    setResolutionMessage("");
+    const image = new Image();
+    image.onload = () => {
+      const minimum = title === "Logo" ? [512, 512] : [1200, 675];
+      if (image.naturalWidth < minimum[0] || image.naturalHeight < minimum[1]) {
+        setResolutionMessage(`This image is ${image.naturalWidth} x ${image.naturalHeight} px. A larger image will look sharper (at least ${minimum[0]} x ${minimum[1]} px recommended).`);
+      } else {
+        setResolutionMessage(`Image resolution: ${image.naturalWidth} x ${image.naturalHeight} px.`);
+      }
+    };
+    image.onerror = () => setResolutionMessage("We couldn't read this image. Try a JPG, PNG, or WebP file.");
+    image.src = preview.url;
+
+    return () => preview.revoke();
+  }, [selectedFile, title]);
+
+  const imageClass = `manage-image-preview ${title === "Logo" ? "logo-preview" : ""}`;
+  const imageFallback = <div className={`manage-image-fallback ${title === "Logo" ? "logo-preview" : ""}`}>Image unavailable</div>;
   return <div className="image-picker-field">
     <span className="image-picker-title">{title}</span>
     <label className="custom-image-picker">
       <span className="custom-image-picker-button">Choose image</span>
-      <span className="custom-image-picker-name">{fileName || "No new image selected"}</span>
-      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => {
-        const file = event.target.files?.[0] || null;
-        setFileName(file?.name || "");
-        onSelect(file);
-        setResolutionMessage("");
-        if (file) {
-          const image = new Image();
-          const previewUrl = URL.createObjectURL(file);
-          image.onload = () => {
-            const minimum = title === "Logo" ? [512, 512] : [1200, 675];
-            if (image.naturalWidth < minimum[0] || image.naturalHeight < minimum[1]) {
-              setResolutionMessage(`This image is ${image.naturalWidth} × ${image.naturalHeight} px. A larger image will look sharper (at least ${minimum[0]} × ${minimum[1]} px recommended).`);
-            } else {
-              setResolutionMessage(`Image resolution: ${image.naturalWidth} × ${image.naturalHeight} px.`);
-            }
-            URL.revokeObjectURL(previewUrl);
-          };
-          image.onerror = () => {
-            setResolutionMessage("We couldn’t read this image. Try a JPG, PNG, or WebP file.");
-            URL.revokeObjectURL(previewUrl);
-          };
-          image.src = previewUrl;
-        }
-      }} />
+      <span className="custom-image-picker-name">{selectedFile?.name || "No new image selected"}</span>
+      <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => onSelect(event.target.files?.[0] || null)} />
     </label>
     <small className="image-recommendation">{help}</small>
     {resolutionMessage && <small className={`image-resolution-message ${resolutionMessage.startsWith("This image") ? "is-low-resolution" : ""}`} aria-live="polite">{resolutionMessage}</small>}
-    {currentImage && <ImageWithFallback className={`manage-image-preview ${title === "Logo" ? "logo-preview" : ""}`} src={currentImage} alt={currentAlt} fallback={<div className={`manage-image-fallback ${title === "Logo" ? "logo-preview" : ""}`}>Image unavailable</div>} />}
+    {localPreviewUrl
+      ? (localPreviewFailed
+        ? imageFallback
+        : <img className={imageClass} src={localPreviewUrl} alt={currentAlt} onError={() => setLocalPreviewFailed(true)} />)
+      : currentImage && <ImageWithFallback className={imageClass} src={currentImage} alt={currentAlt} fallback={imageFallback} />}
   </div>;
 }
 
@@ -130,7 +150,10 @@ function BusinessManagement() {
       setHeroFile(null);
       setEditing(false);
     } catch (err) {
-      setError(err.message || "Unable to update this business.");
+      const hasImageUpload = Boolean(logoFile || heroFile);
+      setError(hasImageUpload
+        ? `Business save failed while uploading the image. Check the connection and backend media storage, then try again. ${err.message || ""}`.trim()
+        : err.message || "Unable to update this business.");
     } finally {
       setSaving(false);
     }
@@ -198,9 +221,9 @@ function BusinessManagement() {
             <label>Instagram username<input name="instagram_handle" value={form.instagram_handle} onChange={updateField} placeholder="@yourbusiness" /></label>
             <label>WhatsApp number<input name="whatsapp_number" type="tel" value={form.whatsapp_number} onChange={updateField} placeholder="+91 98765 43210" /></label>
             <label>Facebook page ID or link<input name="facebook_id" value={form.facebook_id} onChange={updateField} placeholder="Your page name, ID, or URL" /></label>
-            <ImagePicker title="Logo" help="Square image recommended: 512 × 512 px. PNG or WebP works well." currentImage={business?.logo_image || business?.logo_image_external_url} currentAlt="Current business logo" onSelect={setLogoFile} />
+            <ImagePicker title="Logo" help="Square image recommended: 512 × 512 px. PNG or WebP works well." currentImage={business?.logo_image_external_url || business?.logo_image} selectedFile={logoFile} currentAlt="Current business logo" onSelect={setLogoFile} />
             <label>Or use an existing logo URL<input type="url" name="logo_image_external_url" value={form.logo_image_external_url} onChange={updateField} placeholder="https://…" /></label>
-            <ImagePicker title="Website photo" help="Landscape image recommended: 1600 × 900 px (16:9). Use a sharp original photo for best results." currentImage={business?.hero_image || business?.hero_image_external_url} currentAlt="Current website hero photo" onSelect={setHeroFile} />
+            <ImagePicker title="Website photo" help="Landscape image recommended: 1600 × 900 px (16:9). Use a sharp original photo for best results." currentImage={business?.hero_image_external_url || business?.hero_image} selectedFile={heroFile} currentAlt="Current website hero photo" onSelect={setHeroFile} />
             <label>Or use an existing website photo URL<input type="url" name="hero_image_external_url" value={form.hero_image_external_url} onChange={updateField} placeholder="https://…" /></label>
             <div className="manage-business-form-actions"><button className="manage-cancel-button" type="button" onClick={() => setEditing(false)}>Cancel</button><button className="manage-save-button" type="submit" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
           </form>
