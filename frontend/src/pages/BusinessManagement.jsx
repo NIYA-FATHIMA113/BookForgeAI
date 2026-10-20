@@ -195,11 +195,15 @@ function BusinessManagement() {
             <ImagePicker title="Website photo" help="Landscape image recommended: 1600 × 900 px (16:9). Use a sharp original photo for best results." currentImage={business?.hero_image} currentAlt="Current website hero photo" onSelect={setHeroFile} />
             <div className="manage-business-form-actions"><button className="manage-cancel-button" type="button" onClick={() => setEditing(false)}>Cancel</button><button className="manage-save-button" type="submit" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
           </form>
+          {business?.business_type === "restaurant" && <section className="restaurant-spaces-editor" aria-labelledby="restaurant-spaces-title">
+            <div className="manage-section-heading"><div><h3 id="restaurant-spaces-title">Dining and celebration spaces</h3><p>These active spaces determine which experiences customers can select on your website.</p></div></div>
+            <Resources tenantId={tenantId} embedded />
+          </section>}
         </section>}
 
         <section className="manage-panel manage-services"><ServiceList tenantId={tenantId} /></section>
         <section className="manage-panel"><div className="manage-section-heading"><div><h2>Business hours</h2><p>Set the weekly schedule customers can book.</p></div></div><BusinessHours tenantId={tenantId} /></section>
-        <section className="manage-panel"><Resources tenantId={tenantId} embedded /></section>
+        {business?.business_type !== "restaurant" && <section className="manage-panel"><Resources tenantId={tenantId} embedded /></section>}
         <section className="manage-panel manage-bookings"><BookingSection tenantId={tenantId} /></section>
       </main>
     </div>

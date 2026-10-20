@@ -94,6 +94,18 @@
 .manage-bookings form button { min-height: 40px; border: 0; border-radius: 7px; background: #111827; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
 .manage-bookings hr { border: 0; border-top: 1px solid #e5e7eb; }
 
+.restaurant-spaces-editor { grid-column: 1 / -1; margin-top: 8px; padding-top: 24px; border-top: 1px solid #e8ece9; }
+.restaurant-spaces-editor .manage-section-heading { margin-bottom: 16px; }
+.restaurant-spaces-editor .manage-section-heading h3 { margin: 0 0 5px; color: #173d35; font-size: 17px; letter-spacing: -.015em; }
+.restaurant-spaces-editor .manage-section-heading p { max-width: 650px; line-height: 1.55; }
+.manage-business-actions .manage-edit-button { border-color: #126b5d; background: linear-gradient(135deg, #167c6a, #105c52); color: #fff; box-shadow: 0 3px 9px rgba(16, 92, 82, .15); }
+.manage-business-actions .manage-edit-button:hover { border-color: #0f5f52; background: #105f54; }
+.manage-business-form select { appearance: none; padding-right: 36px; background-image: linear-gradient(45deg, transparent 50%, #667085 50%), linear-gradient(135deg, #667085 50%, transparent 50%); background-position: calc(100% - 17px) 18px, calc(100% - 12px) 18px; background-repeat: no-repeat; background-size: 5px 5px; cursor: pointer; }
+.manage-business-form select:hover { border-color: #c6d2ce; background-color: #fbfdfc; }
+.manage-business-form select:focus-visible,
+.manage-business-actions button:focus-visible,
+.manage-business-form-actions button:focus-visible { outline: 3px solid rgba(22, 129, 111, .2); outline-offset: 2px; }
+
 @media (max-width: 700px) {
   .business-management { padding: 30px 18px 50px; }
   .business-management-header h1 { font-size: 32px; }

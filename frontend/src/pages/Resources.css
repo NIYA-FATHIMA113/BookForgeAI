@@ -29,11 +29,21 @@
 
 .resource-form { display: grid; gap: 9px; padding: 17px; border: 1px solid #edf0f2; border-radius: 9px; background: #fafbfc; }
 .resource-form > label { color: #374151; font-size: 13px; font-weight: 600; }
-.resource-form-controls { display: flex; gap: 10px; }
-.resource-form-controls input { flex: 1; min-width: 0; }
+.resource-form-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.resource-form-controls > input { flex: 1 1 220px; min-width: 0; }
+.resource-form-controls > label:not(.resource-event-option) { display: grid; flex: 0 1 150px; gap: 6px; color: #4b5563; font-size: 11px; font-weight: 650; }
+.resource-form-controls input,
+.resource-form-controls select { min-height: 44px; padding: 0 13px; border: 1px solid #dfe3e8; border-radius: 8px; background-color: #fff; color: #111827; font: inherit; outline: none; transition: border-color .16s ease, box-shadow .16s ease, background .16s ease; }
+.resource-form-controls select { min-width: 145px; padding-right: 36px; appearance: none; background-image: linear-gradient(45deg, transparent 50%, #667085 50%), linear-gradient(135deg, #667085 50%, transparent 50%); background-position: calc(100% - 17px) 19px, calc(100% - 12px) 19px; background-repeat: no-repeat; background-size: 5px 5px; cursor: pointer; }
+.resource-form-controls input:focus,
+.resource-form-controls select:focus { border-color: #16816f; box-shadow: 0 0 0 3px rgba(22, 129, 111, .12); }
+.resource-form-controls .resource-event-option { display: flex; flex: 1 1 100%; align-items: center; gap: 10px; min-height: 46px; box-sizing: border-box; padding: 10px 13px; border: 1px solid #dcebe6; border-radius: 9px; background: #f3faf7; color: #245b4f; font-size: 12px; font-weight: 600; cursor: pointer; transition: border-color .16s ease, background .16s ease; }
+.resource-form-controls .resource-event-option:hover { border-color: #9ac9ba; background: #edf8f3; }
+.resource-form-controls .resource-event-option input { width: 18px; min-height: 18px; height: 18px; margin: 0; padding: 0; accent-color: #147563; cursor: pointer; }
 .resource-form button,
 .resource-actions button { min-height: 40px; padding: 0 15px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fff; color: #374151; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.resource-form button:not(.resource-cancel) { border-color: #111827; background: #111827; color: #fff; }
+.resource-form button:not(.resource-cancel) { border-color: #126b5d; background: linear-gradient(135deg, #167c6a, #105c52); color: #fff; box-shadow: 0 3px 8px rgba(16, 92, 82, .16); transition: transform .16s ease, box-shadow .16s ease, filter .16s ease; }
+.resource-form button:not(.resource-cancel):hover { transform: translateY(-1px); box-shadow: 0 6px 13px rgba(16, 92, 82, .22); filter: brightness(1.04); }
 .resource-form button:disabled { opacity: .6; cursor: wait; }
 .resource-form .resource-cancel { background: transparent; }
 
@@ -47,7 +57,10 @@
 .resource-inactive { color: #6b7280; }
 .resource-actions { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .resource-actions button { min-height: 34px; padding: 0 10px; font-size: 12px; }
-.resource-actions button:hover, .resource-form .resource-cancel:hover { background: #f3f4f6; }
+.resource-actions button:hover, .resource-form .resource-cancel:hover { border-color: #cbd5e1; background: #f3f7f6; }
+.resource-actions > span { align-self: center; color: #52625d; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+.resource-actions button:focus-visible,
+.resource-form button:focus-visible { outline: 3px solid rgba(22, 129, 111, .22); outline-offset: 2px; }
 
 .empty-resources { margin-top: 18px; padding: 28px 18px; border: 1px dashed #d1d5db; border-radius: 10px; color: #6b7280; text-align: center; }
 .empty-resources h2, .empty-resources h3 { margin: 0 0 6px; color: #111827; font-size: 16px; }
@@ -58,6 +71,9 @@
 .resources-embedded { min-height: 0; background: transparent; }
 .resources-embedded .resources-content { width: 100%; padding: 0; }
 .resources-embedded .resources-panel { padding: 0; border: 0; box-shadow: none; }
+.resources-embedded .resource-form { border-color: #e5eee9; background: linear-gradient(145deg, #f8fbf9, #f4f8f6); }
+.resources-embedded .resource-card { border-color: #e4ebe7; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+.resources-embedded .resource-card:hover { transform: translateY(-2px); border-color: #cbded5; box-shadow: 0 8px 20px rgba(26, 60, 48, .07); }
 
 @media (max-width: 700px) {
   .resources-content { padding: 30px 18px 50px; }

@@ -222,9 +222,13 @@
 .date-field label,
 .customer-details label { color: var(--text); font-size: 10px; font-weight: 650; letter-spacing: .04em; }
 .date-field input,
+.date-field select,
 .customer-details input { width: 100%; min-height: 47px; padding: 0 12px; border: 1px solid var(--line); border-radius: 0; background: var(--page-bg); color: var(--text); }
 .date-field input:focus,
+.date-field select:focus,
 .customer-details input:focus { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent), transparent 80%); outline-offset: 1px; }
+.date-field select { padding-right: 40px; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 17px) 21px, calc(100% - 12px) 21px; background-repeat: no-repeat; background-size: 5px 5px; cursor: pointer; transition: border-color .18s ease, background-color .18s ease; }
+.date-field select:hover { border-color: var(--accent); background-color: color-mix(in srgb, var(--page-bg), var(--accent) 3%); }
 .date-field small { color: var(--muted); font-size: 9px; }
 .time-field { padding: 20px 0; border-top: 1px solid var(--line); }
 .field-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 13px; }

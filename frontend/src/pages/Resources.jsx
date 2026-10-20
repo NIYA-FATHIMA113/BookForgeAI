@@ -115,14 +115,14 @@ function Resources({ tenantId: initialTenantId = null, embedded = false }) {
 
             <section className="resources-panel">
               <div className="resources-panel-heading">
-                <div><h2>{embedded ? "Shared resources" : "Your resources"}</h2><p>Resources are shared across all services in this business.</p></div>
+                <div><h2>{businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" ? "Dining spaces" : embedded ? "Shared resources" : "Your resources"}</h2><p>{businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" ? "Set the area, seating capacity, and celebration availability for each table or space." : "Resources are shared across all services in this business."}</p></div>
                 <span className="resources-count">{resources.length} {resources.length === 1 ? "resource" : "resources"}</span>
               </div>
 
               <form className="resource-form" onSubmit={saveResource}>
-                <label htmlFor="resource-name">{editing ? "Resource name" : "Add a resource"}</label>
+                <label htmlFor="resource-name">{editing ? "Space name" : businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" ? "Add a dining space" : "Add a resource"}</label>
                 <div className="resource-form-controls">
-                  <input id="resource-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Pitch 1" required />
+                  <input id="resource-name" value={name} onChange={(event) => setName(event.target.value)} placeholder={businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" ? "e.g. Rooftop table 1" : "e.g. Pitch 1"} required />
                   {businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" && <label>Seats <input type="number" min="1" value={capacity} onChange={(event) => setCapacity(event.target.value)} required /></label>}
                   {businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" && <label>Dining area <select value={diningArea} onChange={(event) => setDiningArea(event.target.value)}><option value="indoor">Indoor</option><option value="outdoor">Outdoor</option><option value="rooftop">Rooftop</option></select></label>}
                   {businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" && <label className="resource-event-option"><input type="checkbox" checked={supportsCelebrations} onChange={(event) => setSupportsCelebrations(event.target.checked)} /> Available for birthdays and anniversaries</label>}
