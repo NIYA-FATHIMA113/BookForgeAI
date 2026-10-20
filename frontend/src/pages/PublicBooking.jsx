@@ -185,12 +185,17 @@ function PublicBooking() {
 
   const theme = resolveWebsiteTheme(business);
   const businessName = business?.business_name || slug.replace(/-/g, " ");
+  const businessType = business?.business_type || "salon";
+  const hasBusinessPhoto = Boolean(business?.hero_image);
   const photo = business?.hero_image
     ? { src: business.hero_image, alt: `Photo provided by ${businessName}`, credit: null, href: null }
-    : EDITORIAL_PHOTOS[business?.business_type] || null;
-  const photoSource = resolveImageUrl(photo?.src, { apiBaseUrl: API_BASE_URL, pageProtocol: window.location.protocol });
+    : EDITORIAL_PHOTOS[businessType] || null;
+  // If an owner's uploaded/external photo stops working after deployment, fall
+  // back to the existing category photo before showing the illustrated fallback.
+  const usingEditorialFallback = hasBusinessPhoto && heroImageFailed && Boolean(EDITORIAL_PHOTOS[businessType]);
+  const displayedPhoto = usingEditorialFallback ? EDITORIAL_PHOTOS[businessType] : photo;
+  const photoSource = resolveImageUrl(displayedPhoto?.src, { apiBaseUrl: API_BASE_URL, pageProtocol: window.location.protocol });
   const businessCopy = getBusinessCopy(business?.business_type);
-  const businessType = business?.business_type || "salon";
   const isRestaurant = businessType === "restaurant";
   const menuItems = services.filter((service) => !isRestaurant || !service.is_bookable);
   const defaultTemplate = { restaurant: "restaurant_classic", salon: "salon_editorial", clinic: "clinic_calm", sports_turf: "sports_arena" }[businessType] || "salon_editorial";
@@ -216,12 +221,12 @@ function PublicBooking() {
   const heroPhoto = <div className="template-photo">
     <ImageWithFallback
       src={photoSource}
-      alt={photo?.alt || ""}
+      alt={displayedPhoto?.alt || ""}
       fetchPriority="high"
       onImageError={() => setHeroImageFailed(true)}
       fallback={<div className="hero-image-fallback" aria-hidden="true"><span>{business?.business_type === "clinic" ? "A considered space for your visit" : business?.business_type === "restaurant" ? "A table, made for you" : "Make room for a little care"}</span></div>}
     />
-    {photo?.credit && photoSource && !heroImageFailed && <a className="photo-credit" href={photo.href} target="_blank" rel="noreferrer">Photo by {photo.credit} · Unsplash</a>}
+    {displayedPhoto?.credit && photoSource && (!heroImageFailed || usingEditorialFallback) && <a className="photo-credit" href={displayedPhoto.href} target="_blank" rel="noreferrer">Photo by {displayedPhoto.credit} · Unsplash</a>}
   </div>;
 
   const jumpTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
