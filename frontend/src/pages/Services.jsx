@@ -16,6 +16,8 @@ function Services() {
   const [serviceName, setServiceName] = useState("");
   const [servicePrice, setServicePrice] = useState("");
   const [serviceDuration, setServiceDuration] = useState("");
+  const [serviceDescription, setServiceDescription] = useState("");
+  const [serviceCategory, setServiceCategory] = useState("");
 
   const [editingService, setEditingService] = useState(null);
   
@@ -131,6 +133,8 @@ function Services() {
     setServiceName("");
     setServicePrice("");
     setServiceDuration("");
+    setServiceDescription("");
+    setServiceCategory("");
     setEditingService(null);
     setShowForm(false);
   };
@@ -153,10 +157,12 @@ function Services() {
       return;
     }
 
-    if (
+    const isRestaurant = businesses.find((business) => String(business.id) === selectedBusiness)?.business_type === "restaurant";
+
+    if (!isRestaurant && (
       serviceDuration === "" ||
       Number(serviceDuration) <= 0
-    ) {
+    )) {
       alert(
         "Please enter a valid duration."
       );
@@ -175,7 +181,10 @@ function Services() {
       const body = {
         name: serviceName.trim(),
         price: Number(servicePrice),
-        duration: Number(serviceDuration),
+        duration: Number(serviceDuration) || 90,
+        description: serviceDescription.trim(),
+        category: serviceCategory.trim(),
+        is_bookable: businesses.find((business) => String(business.id) === selectedBusiness)?.business_type !== "restaurant",
       };
 
       let savedService;
@@ -253,6 +262,8 @@ function Services() {
     setServiceDuration(
       service.duration ?? ""
     );
+    setServiceDescription(service.description || "");
+    setServiceCategory(service.category || "");
 
     setShowForm(true);
   };
@@ -449,6 +460,20 @@ function Services() {
 
               <div className="form-field">
 
+                <label>Item description</label>
+                <textarea value={serviceDescription} onChange={(e) => setServiceDescription(e.target.value)} placeholder="Describe this item" />
+
+              </div>
+
+              <div className="form-field">
+
+                <label>Menu category</label>
+                <input type="text" value={serviceCategory} onChange={(e) => setServiceCategory(e.target.value)} placeholder="e.g. Starters" />
+
+              </div>
+
+              <div className="form-field">
+
                 <label>
                   Price
                 </label>
@@ -467,7 +492,7 @@ function Services() {
 
               </div>
 
-              <div className="form-field">
+              {businesses.find((business) => String(business.id) === selectedBusiness)?.business_type !== "restaurant" && <div className="form-field">
 
                 <label>
                   Duration (minutes)
@@ -485,7 +510,7 @@ function Services() {
                   placeholder="e.g. 60"
                 />
 
-              </div>
+              </div>}
 
               <div className="service-form-actions">
 

@@ -77,7 +77,7 @@ function getBusinessTypeLabel(type) {
 
 function getBusinessCopy(type) {
   return {
-    restaurant: { title: <>A table for<br /><em>good moments.</em></>, intro: "Explore our menu and reserve a table at a time that suits you.", action: "Reserve a table", services: "Explore the menu", booking: "Reserve your table", item: "Menu", serviceNote: "Pick a dining option, then see available reservation times.", step: "Menu item" },
+    restaurant: { title: <>A table for<br /><em>good moments.</em></>, intro: "Explore our menu and reserve a table at a time that suits you.", action: "Reserve a table", services: "Explore the menu", booking: "Reserve your table", item: "Menu", serviceNote: "Browse the menu, then reserve a table for your party.", step: "Reservation" },
     salon: { title: <>A little time,<br /><em>well spent.</em></>, intro: "Explore our treatments and choose a time for your next visit.", action: "Book a visit", services: "Choose a treatment", booking: "Book your visit", item: "Treatments", serviceNote: "Choose a treatment and a time that works for you.", step: "Treatment" },
     clinic: { title: <>Care that fits<br /><em>your day.</em></>, intro: "Explore available appointments and choose a time for your visit.", action: "Book an appointment", services: "Available appointments", booking: "Schedule your visit", item: "Appointments", serviceNote: "Choose an appointment type and a time for your visit.", step: "Appointment" },
     sports_turf: { title: <>Make time<br /><em>to play.</em></>, intro: "Choose your activity and reserve an available time on the field.", action: "Reserve a slot", services: "Choose your activity", booking: "Reserve your slot", item: "Activities", serviceNote: "Choose an activity and check the available field times.", step: "Activity" },
@@ -108,6 +108,9 @@ function PublicBooking() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [partySize, setPartySize] = useState(2);
+  const [diningArea, setDiningArea] = useState("any");
+  const [occasion, setOccasion] = useState("regular");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState(null);
@@ -135,7 +138,9 @@ function PublicBooking() {
         if (!businessResponse.ok) throw new Error(businessData.detail || "Unable to load this business.");
         if (!isCurrent) return;
         setBusiness(businessData);
-        setServices(servicesData.results || servicesData);
+        const loadedServices = servicesData.results || servicesData;
+        setServices(loadedServices);
+        if (businessData.business_type === "restaurant") setSelectedService(loadedServices.find((item) => item.is_bookable) || null);
         setHeroImageFailed(false);
       } catch (loadError) {
         if (isCurrent) setError(loadError.message || "Unable to load this booking page.");
@@ -161,7 +166,7 @@ function PublicBooking() {
         setSlots([]);
         setSelectedSlot("");
         const response = await fetch(
-          `${API_BASE_URL}/api/book/${slug}/available-slots/?date=${encodeURIComponent(selectedDate)}&service=${selectedService.id}`
+          `${API_BASE_URL}/api/book/${slug}/available-slots/?date=${encodeURIComponent(selectedDate)}&service=${selectedService.id}${business?.business_type === "restaurant" ? `&guests=${partySize}&area=${diningArea === "any" ? "" : encodeURIComponent(diningArea)}&occasion=${occasion}` : ""}`
         );
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Unable to load available times.");
@@ -174,7 +179,7 @@ function PublicBooking() {
     }
     loadAvailableSlots();
     return () => { isCurrent = false; };
-  }, [slug, selectedService, selectedDate]);
+  }, [slug, selectedService, selectedDate, partySize, diningArea, occasion, business?.business_type]);
 
   const theme = resolveWebsiteTheme(business);
   const businessName = business?.business_name || slug.replace(/-/g, " ");
@@ -183,6 +188,8 @@ function PublicBooking() {
     : EDITORIAL_PHOTOS[business?.business_type] || null;
   const businessCopy = getBusinessCopy(business?.business_type);
   const businessType = business?.business_type || "salon";
+  const isRestaurant = businessType === "restaurant";
+  const menuItems = services.filter((service) => !isRestaurant || !service.is_bookable);
   const defaultTemplate = { restaurant: "restaurant_classic", salon: "salon_editorial", clinic: "clinic_calm", sports_turf: "sports_arena" }[businessType] || "salon_editorial";
   const requestedTemplate = business?.website_template;
   const templateLabel = requestedTemplate && templatesForBusiness(businessType).some(([value]) => value === requestedTemplate)
@@ -235,6 +242,8 @@ function PublicBooking() {
           booking_date: selectedDate,
           booking_time: selectedSlot,
           service: selectedService.id,
+          ...(isRestaurant ? { party_size: partySize } : {}),
+          ...(isRestaurant ? { dining_area: diningArea === "any" ? undefined : diningArea, occasion } : {}),
         }),
       });
       const data = await response.json();
@@ -282,13 +291,13 @@ function PublicBooking() {
           <a href="#about">About</a>
           <a href="#contact">Contact</a>
         </div>
-        <button className="editorial-button nav-book-button" type="button" onClick={() => jumpTo("services")}>{businessCopy.action} <span aria-hidden="true">↗</span></button>
+        <button className="editorial-button nav-book-button" type="button" onClick={() => jumpTo(isRestaurant ? "appointment" : "services")}>{businessCopy.action} <span aria-hidden="true">↗</span></button>
       </nav>
 
       <div id="main-content">
         {businessType === "restaurant" && <section className="restaurant-hero" id="home" aria-labelledby="business-title">
           {heroPhoto}<div className="restaurant-hero-shade" />
-          <div className="restaurant-hero-content"><p className="public-eyebrow">{business?.location || "A PLACE AT THE TABLE"}</p><h1 id="business-title">{businessCopy.title}</h1><p>{businessCopy.intro}</p><button className="editorial-button" type="button" onClick={() => jumpTo("services")}>{businessCopy.action}<span>↓</span></button></div>
+          <div className="restaurant-hero-content"><p className="public-eyebrow">{business?.location || "A PLACE AT THE TABLE"}</p><h1 id="business-title">{businessCopy.title}</h1><p>{businessCopy.intro}</p><button className="editorial-button" type="button" onClick={() => jumpTo("appointment")}>{businessCopy.action}<span>↓</span></button></div>
           <span className="restaurant-hero-caption">{businessName} · {businessCopy.item}</span>
         </section>}
         {businessType === "salon" && <section className="salon-hero" id="home" aria-labelledby="business-title">
@@ -311,23 +320,24 @@ function PublicBooking() {
             <div><p className="public-eyebrow">{businessCopy.item.toUpperCase()}</p><h2 id="services-title">{businessCopy.services}</h2></div>
             <p>{businessCopy.serviceNote}</p>
           </div>
-          {services.length === 0 ? <div className="empty-services"><span className="empty-service-mark" aria-hidden="true">✳</span><h3>No {businessCopy.item.toLowerCase()} are available right now</h3><p>Please contact {businessName} for more information.</p></div> : (
+          {menuItems.length === 0 ? <div className="empty-services"><span className="empty-service-mark" aria-hidden="true">✳</span><h3>{isRestaurant ? "Menu details are coming soon" : `No ${businessCopy.item.toLowerCase()} are available right now`}</h3><p>Please contact {businessName} for more information.</p></div> : (
             <div className={`editorial-service-list service-template-${templateGroup}`}>
-              {services.map((service, index) => {
+              {menuItems.map((service, index) => {
                 const price = formatPrice(service.price);
                 return <article className={`editorial-service ${selectedService?.id === service.id ? "is-selected" : ""}`} key={service.id}>
                   <span className="service-index">{String(index + 1).padStart(2, "0")}</span>
                   <div className="service-copy">
+                    {isRestaurant && service.category && <span className="public-eyebrow">{service.category}</span>}
                     <h3>{service.name}</h3>
                     {service.description && <p>{service.description}</p>}
                     <div className="service-meta">
-                      {service.duration ? <span>{service.duration} minutes</span> : null}
+                      {!isRestaurant && service.duration ? <span>{service.duration} minutes</span> : null}
                       {price ? <span>{price}</span> : null}
                     </div>
                   </div>
-                  <button className="service-select" type="button" aria-pressed={selectedService?.id === service.id} onClick={() => chooseService(service)}>
+                  {!isRestaurant && <button className="service-select" type="button" aria-pressed={selectedService?.id === service.id} onClick={() => chooseService(service)}>
                     {selectedService?.id === service.id ? "Selected" : `Select ${businessCopy.step.toLowerCase()}`}<span aria-hidden="true">↗</span>
-                  </button>
+                  </button>}
                 </article>;
               })}
             </div>
@@ -339,7 +349,7 @@ function PublicBooking() {
           <div className="about-copy">
             <p className="public-eyebrow">A NOTE BEFORE YOU VISIT</p>
             <h2 id="about-title">Good things begin<br />with a little <em>space.</em></h2>
-            <p>Browse the services available at {businessName}, then reserve an appointment using the live schedule. Service details and availability shown here come from the business’s current booking information.</p>
+            <p>{isRestaurant ? `Browse the menu at ${businessName}, then reserve a table for your party using live availability.` : `Browse the services available at ${businessName}, then reserve an appointment using the live schedule.`}</p>
             {business?.location && <p className="about-location">{business.location}</p>}
           </div>
           <div className="about-detail-card">
@@ -353,7 +363,7 @@ function PublicBooking() {
           <div className="appointment-intro">
             <p className="public-eyebrow">{businessCopy.step.toUpperCase()}</p>
             <h2 id="appointment-title">{businessCopy.booking}</h2>
-            <p>Select what you need, then choose a date and available time. Your request goes directly to {businessName}.</p>
+            <p>{isRestaurant ? `Choose your party size and a time. We’ll assign an available table that seats everyone.` : `Select what you need, then choose a date and available time. Your request goes directly to ${businessName}.`}</p>
             <ol className="booking-steps" aria-label="Booking progress">
               <li className={selectedService ? "step-done" : "step-current"}>{businessCopy.step}</li>
               <li className={selectedDate ? "step-done" : selectedService ? "step-current" : ""}>Date</li>
@@ -369,15 +379,21 @@ function PublicBooking() {
               <p className="confirmation-message">Your booking has been successfully created.</p>
               <dl className="confirmation-details">
                 <div><dt>Service</dt><dd>{selectedService?.name}</dd></div>
+                {isRestaurant && <div><dt>Guests</dt><dd>{bookingSuccess.party_size || partySize}</dd></div>}
+                {isRestaurant && occasion !== "regular" && <div><dt>Occasion</dt><dd>{occasion === "birthday" ? "Birthday" : "Anniversary"}</dd></div>}
+                {isRestaurant && bookingSuccess.resource_dining_area && <div><dt>Dining area</dt><dd>{bookingSuccess.resource_dining_area}</dd></div>}
                 <div><dt>Date</dt><dd>{selectedDate}</dd></div>
                 <div><dt>Time</dt><dd>{selectedSlot}</dd></div>
                 <div><dt>Name</dt><dd>{customerName}</dd></div>
-                {bookingSuccess.resource && <div><dt>Reserved</dt><dd>{typeof bookingSuccess.resource === "object" ? bookingSuccess.resource.name : bookingSuccess.resource}</dd></div>}
+                {bookingSuccess.resource && <div><dt>Reserved</dt><dd>{bookingSuccess.resource_name || (typeof bookingSuccess.resource === "object" ? bookingSuccess.resource.name : `Table ${bookingSuccess.resource}`)}</dd></div>}
               </dl>
               <p className="confirmation-note">A confirmation has been recorded for this booking.</p>
             </div> : <>
               {!selectedService && <div className="booking-empty-state"><span>First</span><p>Choose a service above to begin your booking.</p></div>}
               {selectedService && <>
+                {isRestaurant && <div className="date-field"><label htmlFor="party-size">Number of guests</label><input id="party-size" type="number" min="1" max="50" value={partySize} onChange={(event) => { setPartySize(Math.max(1, Number(event.target.value) || 1)); setSelectedSlot(""); }} /><small>We’ll match your party with a table that has enough seats.</small></div>}
+                {isRestaurant && (business?.dining_areas || []).length > 0 && <div className="date-field"><label htmlFor="dining-area">Dining experience</label><select id="dining-area" value={diningArea} onChange={(event) => { setDiningArea(event.target.value); setSelectedSlot(""); }}><option value="any">Any available area</option>{business.dining_areas.map((area) => <option key={area} value={area}>{area.charAt(0).toUpperCase() + area.slice(1)}</option>)}</select></div>}
+                {isRestaurant && business?.celebrations_available && <div className="date-field"><label htmlFor="booking-occasion">Occasion</label><select id="booking-occasion" value={occasion} onChange={(event) => { setOccasion(event.target.value); setSelectedSlot(""); }}><option value="regular">Regular dining</option><option value="birthday">Birthday</option><option value="anniversary">Anniversary</option></select><small>Celebration bookings use spaces marked available by the restaurant.</small></div>}
                 <div className="selected-service-summary">
                 <div><span className="summary-label">SELECTED {businessCopy.step.toUpperCase()}</span><strong>{selectedService.name}</strong></div>
                   <button type="button" onClick={() => { setSelectedService(null); setSelectedDate(""); setSelectedSlot(""); }}>Change</button>
@@ -402,6 +418,9 @@ function PublicBooking() {
                 <label htmlFor="customer-name">Full name<input id="customer-name" name="name" type="text" autoComplete="name" value={customerName} onChange={(event) => setCustomerName(event.target.value)} required /></label>
                 <label htmlFor="customer-phone">Phone number<input id="customer-phone" name="tel" type="tel" autoComplete="tel" value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} required /></label>
                 <div className="booking-recap"><span>{selectedService.name}</span><span>{new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · {selectedSlot}</span>{formatPrice(selectedService.price) && <strong>{formatPrice(selectedService.price)}</strong>}</div>
+                {isRestaurant && <div className="booking-recap"><span>Party size</span><span>{partySize} {partySize === 1 ? "guest" : "guests"}</span></div>}
+                {isRestaurant && occasion !== "regular" && <div className="booking-recap"><span>Occasion</span><span>{occasion === "birthday" ? "Birthday" : "Anniversary"}</span></div>}
+                {isRestaurant && diningArea !== "any" && <div className="booking-recap"><span>Dining experience</span><span>{diningArea}</span></div>}
                 {bookingError && <p className="booking-error" role="alert">{bookingError}</p>}
                 <button className="editorial-button submit-booking" type="submit" disabled={bookingLoading}>{bookingLoading ? "Saving your booking…" : businessCopy.action}<span aria-hidden="true">↗</span></button>
                 <p className="form-privacy-note">Your details are used to manage this appointment.</p>

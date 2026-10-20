@@ -17,6 +17,8 @@ class PublicTenantDetailView(APIView):
     def get(self, request, slug):
         tenant = get_object_or_404(Tenant, slug=slug, is_active=True)
         hours = BusinessHours.objects.filter(tenant=tenant).order_by("day_of_week")
+        active_resources = tenant.resources.filter(is_active=True)
+        dining_areas = list(active_resources.values_list("dining_area", flat=True).distinct())
         return Response({
             "id": tenant.id,
             "business_name": tenant.business_name,
@@ -33,6 +35,8 @@ class PublicTenantDetailView(APIView):
             "location": tenant.location,
             "contact_phone": tenant.contact_phone,
             "contact_email": tenant.contact_email,
+            "dining_areas": dining_areas if tenant.business_type == "restaurant" else [],
+            "celebrations_available": tenant.business_type == "restaurant" and active_resources.filter(supports_celebrations=True).exists(),
             "business_hours": [
                 {
                     "day_of_week": item.day_of_week,

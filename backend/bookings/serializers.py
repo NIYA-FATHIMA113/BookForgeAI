@@ -13,6 +13,9 @@ from datetime import date, datetime
 
 
 class BookingSerializer(serializers.ModelSerializer):
+    resource_name = serializers.CharField(source="resource.name", read_only=True)
+    resource_dining_area = serializers.CharField(source="resource.dining_area", read_only=True)
+    dining_area = serializers.ChoiceField(choices=["indoor", "outdoor", "rooftop"], required=False, write_only=True)
 
     class Meta:
         model = Booking
@@ -21,10 +24,15 @@ class BookingSerializer(serializers.ModelSerializer):
             "id",
             "customer_name",
             "customer_phone",
+            "party_size",
+            "occasion",
+            "dining_area",
             "booking_date",
             "booking_time",
             "service",
             "resource",
+            "resource_name",
+            "resource_dining_area",
             "status",
             "created_at",
         ]
@@ -88,6 +96,13 @@ class BookingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "This service is currently unavailable."
             )
+        if tenant.business_type == "restaurant" and not service.is_bookable:
+            raise serializers.ValidationError({"service": "Menu items cannot be booked. Choose table reservation."})
+        party_size = attrs.get("party_size", 1)
+        occasion = attrs.get("occasion", "regular")
+        dining_area = attrs.pop("dining_area", None)
+        if party_size < 1:
+            raise serializers.ValidationError({"party_size": "Party size must be at least 1."})
 
         # --------------------------------
         # 2. Get business hours
@@ -129,6 +144,14 @@ class BookingSerializer(serializers.ModelSerializer):
         # --------------------------------
 
         resources = tenant.resources.filter(is_active=True)
+        if tenant.business_type == "restaurant":
+            resources = resources.filter(capacity__gte=party_size)
+            if dining_area:
+                resources = resources.filter(dining_area=dining_area)
+            if occasion != "regular":
+                resources = resources.filter(supports_celebrations=True)
+        elif occasion != "regular":
+            raise serializers.ValidationError({"occasion": "Celebration bookings are only available for restaurants."})
 
         if not resources.exists():
 

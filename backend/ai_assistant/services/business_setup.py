@@ -145,6 +145,9 @@ def create_business_from_configuration(
     # 3. Create / update Services
     # --------------------------------
 
+    if tenant.business_type == "restaurant":
+        Service.objects.filter(tenant=tenant).update(is_bookable=False)
+
     for service_data in services_data:
 
         # BusinessConfiguration stores services
@@ -166,12 +169,30 @@ def create_business_from_configuration(
         if price is None:
             price = 0
 
+        is_restaurant = tenant.business_type == "restaurant"
         Service.objects.update_or_create(
             tenant=tenant,
             name=service_name,
             defaults={
                 "duration": duration,
                 "price": price,
+                "is_active": True,
+                "description": service_data.get("description", ""),
+                "category": service_data.get("category", ""),
+                "is_bookable": not is_restaurant,
+            },
+        )
+
+    if tenant.business_type == "restaurant":
+        Service.objects.update_or_create(
+            tenant=tenant,
+            name="Table reservation",
+            defaults={
+                "duration": configuration.booking_length_minutes or 90,
+                "price": 0,
+                "description": "Reserve a table for your party.",
+                "category": "Reservations",
+                "is_bookable": True,
                 "is_active": True,
             },
         )
@@ -186,7 +207,7 @@ def create_business_from_configuration(
         Resource.objects.get_or_create(
             tenant=tenant,
             name=f"Resource {resource_number}",
-            defaults={"is_active": True},
+            defaults={"is_active": True, "capacity": 4},
         )
 
     # --------------------------------

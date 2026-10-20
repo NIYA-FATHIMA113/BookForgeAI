@@ -6,6 +6,11 @@ from services.models import Service, Resource
 
 
 class Booking(models.Model):
+    OCCASIONS = [
+        ("regular", "Regular dining"),
+        ("birthday", "Birthday"),
+        ("anniversary", "Anniversary"),
+    ]
     STATUS_CHOICES = [
         ("PENDING", "Pending"),
         ("CONFIRMED", "Confirmed"),
@@ -26,6 +31,10 @@ class Booking(models.Model):
     customer_phone = models.CharField(
         max_length=15
     )
+
+    party_size = models.PositiveSmallIntegerField(default=1)
+
+    occasion = models.CharField(max_length=20, choices=OCCASIONS, default="regular")
 
     booking_date = models.DateField()
 

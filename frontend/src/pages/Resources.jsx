@@ -8,6 +8,9 @@ function Resources({ tenantId: initialTenantId = null, embedded = false }) {
   const [tenantId, setTenantId] = useState(initialTenantId ? String(initialTenantId) : "");
   const [resources, setResources] = useState([]);
   const [name, setName] = useState("");
+  const [capacity, setCapacity] = useState(4);
+  const [diningArea, setDiningArea] = useState("indoor");
+  const [supportsCelebrations, setSupportsCelebrations] = useState(false);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +50,9 @@ function Resources({ tenantId: initialTenantId = null, embedded = false }) {
     setTenantId(id);
     setEditing(null);
     setName("");
+    setCapacity(4);
+    setDiningArea("indoor");
+    setSupportsCelebrations(false);
     try {
       setError("");
       await loadResources(id);
@@ -62,8 +68,8 @@ function Resources({ tenantId: initialTenantId = null, embedded = false }) {
       setSaving(true);
       setError("");
       const saved = editing
-        ? await apiRequest(`/api/resources/${editing.id}/`, { method: "PATCH", body: JSON.stringify({ name: name.trim() }) })
-        : await apiRequest(`/api/tenants/${tenantId}/resources/`, { method: "POST", body: JSON.stringify({ name: name.trim() }) });
+        ? await apiRequest(`/api/resources/${editing.id}/`, { method: "PATCH", body: JSON.stringify({ name: name.trim(), capacity: Number(capacity), dining_area: diningArea, supports_celebrations: supportsCelebrations }) })
+        : await apiRequest(`/api/tenants/${tenantId}/resources/`, { method: "POST", body: JSON.stringify({ name: name.trim(), capacity: Number(capacity), dining_area: diningArea, supports_celebrations: supportsCelebrations }) });
       setResources((current) => editing
         ? current.map((resource) => resource.id === editing.id ? saved : resource)
         : [...current, saved]);
@@ -117,6 +123,9 @@ function Resources({ tenantId: initialTenantId = null, embedded = false }) {
                 <label htmlFor="resource-name">{editing ? "Resource name" : "Add a resource"}</label>
                 <div className="resource-form-controls">
                   <input id="resource-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Pitch 1" required />
+                  {businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" && <label>Seats <input type="number" min="1" value={capacity} onChange={(event) => setCapacity(event.target.value)} required /></label>}
+                  {businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" && <label>Dining area <select value={diningArea} onChange={(event) => setDiningArea(event.target.value)}><option value="indoor">Indoor</option><option value="outdoor">Outdoor</option><option value="rooftop">Rooftop</option></select></label>}
+                  {businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" && <label className="resource-event-option"><input type="checkbox" checked={supportsCelebrations} onChange={(event) => setSupportsCelebrations(event.target.checked)} /> Available for birthdays and anniversaries</label>}
                   <button disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Add resource"}</button>
                   {editing && <button className="resource-cancel" type="button" onClick={() => { setEditing(null); setName(""); }}>Cancel</button>}
                 </div>
@@ -126,7 +135,8 @@ function Resources({ tenantId: initialTenantId = null, embedded = false }) {
                 {resources.map((resource) => <article className="resource-card" key={resource.id}>
                   <div className="resource-card-title"><span className="resource-icon" aria-hidden="true">↗</span><div><h3>{resource.name}</h3><span className={resource.is_active ? "resource-active" : "resource-inactive"}>{resource.is_active ? "Active" : "Inactive"}</span></div></div>
                   <div className="resource-actions">
-                    <button type="button" onClick={() => { setEditing(resource); setName(resource.name); }}>Edit</button>
+                    {businesses.find((business) => String(business.id) === tenantId)?.business_type === "restaurant" && <span>{resource.capacity} seats · {resource.dining_area} {resource.supports_celebrations ? "· Celebrations" : ""}</span>}
+                    <button type="button" onClick={() => { setEditing(resource); setName(resource.name); setCapacity(resource.capacity || 4); setDiningArea(resource.dining_area || "indoor"); setSupportsCelebrations(resource.supports_celebrations || false); }}>Edit</button>
                     <button type="button" onClick={() => toggleResource(resource)}>{resource.is_active ? "Deactivate" : "Activate"}</button>
                   </div>
                 </article>)}

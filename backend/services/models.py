@@ -12,6 +12,12 @@ class Service(models.Model):
 
     name = models.CharField(max_length=100)
 
+    description = models.TextField(blank=True)
+
+    category = models.CharField(max_length=80, blank=True)
+
+    is_bookable = models.BooleanField(default=True)
+
     duration = models.PositiveIntegerField(
         help_text="Duration in minutes"
     )
@@ -32,6 +38,11 @@ class Service(models.Model):
 
 
 class Resource(models.Model):
+    DINING_AREAS = [
+        ("indoor", "Indoor"),
+        ("outdoor", "Outdoor"),
+        ("rooftop", "Rooftop"),
+    ]
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.CASCADE,
@@ -41,6 +52,12 @@ class Resource(models.Model):
     name = models.CharField(
         max_length=100
     )
+
+    capacity = models.PositiveIntegerField(default=4)
+
+    dining_area = models.CharField(max_length=20, choices=DINING_AREAS, default="indoor")
+
+    supports_celebrations = models.BooleanField(default=False)
 
     is_active = models.BooleanField(
         default=True

@@ -10,6 +10,9 @@ class ServiceSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "description",
+            "category",
+            "is_bookable",
             "duration",
             "price",
             "is_active",
@@ -31,6 +34,9 @@ class ResourceSerializer(serializers.ModelSerializer):
             "id",
             "tenant",
             "name",
+            "capacity",
+            "dining_area",
+            "supports_celebrations",
             "is_active",
             "created_at",
         ]

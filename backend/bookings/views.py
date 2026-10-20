@@ -127,6 +127,10 @@ class BookingListView(generics.ListAPIView):
                 "customer_phone":
                     booking.customer_phone,
 
+                "party_size": booking.party_size,
+
+                "occasion": booking.occasion,
+
                 "tenant": {
                     "id": booking.tenant.id,
                     "business_name": booking.tenant.business_name,
@@ -163,6 +167,8 @@ class BookingListView(generics.ListAPIView):
 
                         "name":
                             booking.resource.name,
+
+                        "dining_area": booking.resource.dining_area,
                     }
 
                     if booking.resource
@@ -316,6 +322,19 @@ class AvailableSlotsView(generics.ListAPIView):
         service_id = request.query_params.get(
             "service"
         )
+        party_size = request.query_params.get("guests", "2")
+        dining_area = request.query_params.get("area", "")
+        occasion = request.query_params.get("occasion", "regular")
+        try:
+            party_size = int(party_size)
+            if party_size < 1:
+                raise ValueError
+        except (TypeError, ValueError):
+            return Response({"error": "Guest count must be a positive whole number."}, status=status.HTTP_400_BAD_REQUEST)
+        if dining_area and dining_area not in {"indoor", "outdoor", "rooftop"}:
+            return Response({"error": "Choose an available dining area."}, status=status.HTTP_400_BAD_REQUEST)
+        if occasion not in {"regular", "birthday", "anniversary"}:
+            return Response({"error": "Choose a valid reservation occasion."}, status=status.HTTP_400_BAD_REQUEST)
 
         if not date_string:
 
@@ -449,12 +468,20 @@ class AvailableSlotsView(generics.ListAPIView):
 
             is_active=True
         )
+        if tenant.business_type == "restaurant" and not service.is_bookable:
+            return Response({"error": "Menu items cannot be booked. Choose table reservation."}, status=status.HTTP_400_BAD_REQUEST)
 
         # --------------------------------
         # 6. Get active resources
         # --------------------------------
 
         resources = tenant.resources.filter(is_active=True)
+        if tenant.business_type == "restaurant":
+            resources = resources.filter(capacity__gte=party_size)
+            if dining_area:
+                resources = resources.filter(dining_area=dining_area)
+            if occasion != "regular":
+                resources = resources.filter(supports_celebrations=True)
 
         if not resources.exists():
 
