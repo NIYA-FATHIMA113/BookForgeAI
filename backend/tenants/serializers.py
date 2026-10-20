@@ -1,9 +1,31 @@
 from rest_framework import serializers
+from PIL import Image, UnidentifiedImageError
 
 from .models import Tenant
 
+MAX_BUSINESS_IMAGE_SIZE = 8 * 1024 * 1024
+ALLOWED_BUSINESS_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+
+
+def validate_business_image(upload):
+    if upload.size > MAX_BUSINESS_IMAGE_SIZE:
+        raise serializers.ValidationError("Images must be 8 MB or smaller.")
+    try:
+        image = Image.open(upload)
+        image.verify()
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise serializers.ValidationError("Upload a valid JPEG, PNG, or WebP image.")
+    finally:
+        upload.seek(0)
+    if image.format not in ALLOWED_BUSINESS_IMAGE_FORMATS:
+        raise serializers.ValidationError("Upload a valid JPEG, PNG, or WebP image.")
+    return upload
+
 
 class TenantSerializer(serializers.ModelSerializer):
+
+    logo_image = serializers.ImageField(required=False, allow_null=True)
+    hero_image = serializers.ImageField(required=False, allow_null=True)
 
     def validate(self, attrs):
         business_type = attrs.get("business_type", getattr(self.instance, "business_type", ""))
@@ -27,6 +49,8 @@ class TenantSerializer(serializers.ModelSerializer):
             "business_name_font",
             "logo_image",
             "hero_image",
+            "logo_image_external_url",
+            "hero_image_external_url",
             "instagram_handle",
             "whatsapp_number",
             "facebook_id",
@@ -62,3 +86,29 @@ class TenantSerializer(serializers.ModelSerializer):
             )
 
         return value
+
+    def validate_logo_image(self, value):
+        return validate_business_image(value) if value else value
+
+    def validate_hero_image(self, value):
+        return validate_business_image(value) if value else value
+
+    def validate_logo_image_external_url(self, value):
+        return self.validate_external_image_url(value)
+
+    def validate_hero_image_external_url(self, value):
+        return self.validate_external_image_url(value)
+
+    @staticmethod
+    def validate_external_image_url(value):
+        value = value.strip()
+        if value and not value.lower().startswith(("https://", "http://")):
+            raise serializers.ValidationError("Use a complete HTTP or HTTPS image URL.")
+        return value
+
+    def update(self, instance, validated_data):
+        if validated_data.get("logo_image"):
+            validated_data["logo_image_external_url"] = ""
+        if validated_data.get("hero_image"):
+            validated_data["hero_image_external_url"] = ""
+        return super().update(instance, validated_data)

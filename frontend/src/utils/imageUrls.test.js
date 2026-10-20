@@ -44,8 +44,8 @@ test("remaps localhost image URLs to the configured deployed API host", () => {
   );
 });
 
-test("rejects missing, placeholder, malformed, and non-web URLs", () => {
-  for (const value of [null, "", "  ", "undefined", "null", "javascript:alert(1)", "file:///tmp/image.png", "https://["]) {
+test("rejects missing, placeholder, malformed, whitespace, and non-web URLs", () => {
+  for (const value of [null, "", "  ", "undefined", "null", "javascript:alert(1)", "file:///tmp/image.png", "https://[", "https://images.example.test/hero image.png"]) {
     assert.equal(resolveImageUrl(value, { apiBaseUrl, pageProtocol: "https:" }), null, String(value));
   }
 });

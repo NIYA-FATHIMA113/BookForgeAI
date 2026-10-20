@@ -5,6 +5,7 @@ export function resolveImageUrl(value, { apiBaseUrl = "", pageProtocol = "" } = 
 
   const rawUrl = value.trim();
   if (!rawUrl || IMAGE_PLACEHOLDERS.has(rawUrl.toLowerCase())) return null;
+  if (/\s/.test(rawUrl)) return null;
 
   let resolved;
   try {

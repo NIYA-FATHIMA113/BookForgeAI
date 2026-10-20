@@ -71,6 +71,8 @@ function BusinessManagement() {
     instagram_handle: "",
     whatsapp_number: "",
     facebook_id: "",
+    logo_image_external_url: "",
+    hero_image_external_url: "",
   });
   const [logoFile, setLogoFile] = useState(null);
   const [heroFile, setHeroFile] = useState(null);
@@ -92,6 +94,8 @@ function BusinessManagement() {
           instagram_handle: data.instagram_handle || "",
           whatsapp_number: data.whatsapp_number || "",
           facebook_id: data.facebook_id || "",
+          logo_image_external_url: data.logo_image_external_url || "",
+          hero_image_external_url: data.hero_image_external_url || "",
         });
       })
       .catch((err) => setError(err.message || "Unable to load this business."));
@@ -115,6 +119,8 @@ function BusinessManagement() {
       Object.entries(form).forEach(([key, value]) => body.append(key, value));
       if (logoFile) body.append("logo_image", logoFile);
       if (heroFile) body.append("hero_image", heroFile);
+      if (logoFile) body.set("logo_image_external_url", "");
+      if (heroFile) body.set("hero_image_external_url", "");
       const updated = await apiRequest(`/api/tenants/${tenantId}/`, {
         method: "PATCH",
         body,
@@ -192,8 +198,10 @@ function BusinessManagement() {
             <label>Instagram username<input name="instagram_handle" value={form.instagram_handle} onChange={updateField} placeholder="@yourbusiness" /></label>
             <label>WhatsApp number<input name="whatsapp_number" type="tel" value={form.whatsapp_number} onChange={updateField} placeholder="+91 98765 43210" /></label>
             <label>Facebook page ID or link<input name="facebook_id" value={form.facebook_id} onChange={updateField} placeholder="Your page name, ID, or URL" /></label>
-            <ImagePicker title="Logo" help="Square image recommended: 512 × 512 px. PNG or WebP works well." currentImage={business?.logo_image} currentAlt="Current business logo" onSelect={setLogoFile} />
-            <ImagePicker title="Website photo" help="Landscape image recommended: 1600 × 900 px (16:9). Use a sharp original photo for best results." currentImage={business?.hero_image} currentAlt="Current website hero photo" onSelect={setHeroFile} />
+            <ImagePicker title="Logo" help="Square image recommended: 512 × 512 px. PNG or WebP works well." currentImage={business?.logo_image || business?.logo_image_external_url} currentAlt="Current business logo" onSelect={setLogoFile} />
+            <label>Or use an existing logo URL<input type="url" name="logo_image_external_url" value={form.logo_image_external_url} onChange={updateField} placeholder="https://…" /></label>
+            <ImagePicker title="Website photo" help="Landscape image recommended: 1600 × 900 px (16:9). Use a sharp original photo for best results." currentImage={business?.hero_image || business?.hero_image_external_url} currentAlt="Current website hero photo" onSelect={setHeroFile} />
+            <label>Or use an existing website photo URL<input type="url" name="hero_image_external_url" value={form.hero_image_external_url} onChange={updateField} placeholder="https://…" /></label>
             <div className="manage-business-form-actions"><button className="manage-cancel-button" type="button" onClick={() => setEditing(false)}>Cancel</button><button className="manage-save-button" type="submit" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
           </form>
           {business?.business_type === "restaurant" && <section className="restaurant-spaces-editor" aria-labelledby="restaurant-spaces-title">

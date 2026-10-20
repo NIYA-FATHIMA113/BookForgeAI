@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 
 from .models import Tenant
 from .serializers import TenantSerializer
+from .media_urls import public_image_url
 from availability.models import BusinessHours
 
 
@@ -27,8 +28,8 @@ class PublicTenantDetailView(APIView):
             "website_template": tenant.website_template,
             "website_font": tenant.website_font,
             "business_name_font": tenant.business_name_font,
-            "logo_image": request.build_absolute_uri(tenant.logo_image.url) if tenant.logo_image else None,
-            "hero_image": request.build_absolute_uri(tenant.hero_image.url) if tenant.hero_image else None,
+            "logo_image": public_image_url(request, tenant.logo_image, tenant.logo_image_external_url),
+            "hero_image": public_image_url(request, tenant.hero_image, tenant.hero_image_external_url),
             "instagram_handle": tenant.instagram_handle,
             "whatsapp_number": tenant.whatsapp_number,
             "facebook_id": tenant.facebook_id,

@@ -82,6 +82,9 @@ class Tenant(models.Model):
 
     logo_image = models.ImageField(upload_to="businesses/logos/", blank=True, null=True)
     hero_image = models.ImageField(upload_to="businesses/hero/", blank=True, null=True)
+    # External URLs remain references; they are never fetched or re-uploaded.
+    logo_image_external_url = models.URLField(blank=True)
+    hero_image_external_url = models.URLField(blank=True)
     instagram_handle = models.CharField(max_length=100, blank=True)
     whatsapp_number = models.CharField(max_length=30, blank=True)
     facebook_id = models.CharField(max_length=200, blank=True)
