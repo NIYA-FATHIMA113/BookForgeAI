@@ -408,6 +408,8 @@
 .restaurant-hero-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(25,20,16,.78), rgba(25,20,16,.24) 76%), linear-gradient(0deg, rgba(25,20,16,.3), transparent 45%); }
 .restaurant-hero-content { position: relative; z-index: 1; box-sizing: border-box; width: min(660px, 85%); margin-left: max(8%, calc((100% - 1150px) / 2)); padding: 70px 0; }
 .restaurant-hero-content .public-eyebrow { color: #f5dcc0; }
+.business-name-hero { margin: 0 0 12px; color: inherit; font-size: clamp(16px, var(--business-name-size, 24px), 48px); font-weight: 700; line-height: 1.08; overflow-wrap: anywhere; }
+.restaurant-hero .business-name-hero { color: #fff8eb; }
 .restaurant-hero-content h1 { max-width: 11ch; margin: 21px 0; font-size: clamp(58px, 8vw, 112px); line-height: .98; overflow-wrap: anywhere; text-wrap: balance; }
 .restaurant-hero-content h1 em { color: #f1c58d; }
 .restaurant-hero-content > p:not(.public-eyebrow) { max-width: 400px; margin: 0 0 28px; color: rgba(255,255,255,.83); }
@@ -600,6 +602,7 @@
 .public-booking[data-template="restaurant_modern"] .restaurant-hero-content { align-self: end; width: min(720px,85%); margin: 0 auto 42px; text-align: center; }
 .public-booking[data-template="restaurant_modern"] .restaurant-hero-content > p:not(.public-eyebrow) { margin-right: auto; margin-left: auto; }
 .public-booking[data-template="restaurant_bistro"] .restaurant-hero { min-height: 620px; margin: 40px auto 0; background: #eee0cb; color: #38271c; }
+.public-booking[data-template="restaurant_bistro"] .restaurant-hero .business-name-hero { color: #38271c; }
 .public-booking[data-template="restaurant_bistro"] .restaurant-hero .template-photo { inset: auto 0 0 auto; width: 52%; height: 88%; border-radius: 55% 0 0; }
 .public-booking[data-template="restaurant_bistro"] .restaurant-hero-shade { background: linear-gradient(90deg,#eee0cb 0 42%,rgba(238,224,203,.9) 52%,transparent 78%); }
 .public-booking[data-template="restaurant_bistro"] .restaurant-hero-content { width: min(500px,42%); margin-left: max(7%, calc((100% - 1120px) / 2)); padding: 46px 0; }
