@@ -68,6 +68,10 @@ class BusinessConfiguration(models.Model):
         blank=True,
     )
 
+    website_style = models.CharField(max_length=20, blank=True)
+    website_style_suggested = models.BooleanField(default=False)
+    contact_details_reviewed = models.BooleanField(default=False)
+
     services = models.JSONField(
         default=list,
         blank=True,

@@ -121,6 +121,15 @@ def update_business_configuration(
             normalized_type, normalized_type
         )
 
+    if business_info.website_style:
+        from tenants.models import Tenant
+        allowed_styles = {value for value, _label in Tenant.WEBSITE_STYLES}
+        if business_info.website_style in allowed_styles - {"auto"}:
+            configuration.website_style = business_info.website_style
+            configuration.website_style_suggested = bool(business_info.website_style_suggested)
+    elif business_info.website_style_suggested:
+        configuration.website_style_suggested = True
+
     # -----------------------------------------
     # Booking deposit
     # -----------------------------------------

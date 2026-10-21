@@ -30,6 +30,9 @@ class BusinessInfo(BaseModel):
         description="Type of business."
     )
 
+    website_style: Optional[str] = Field(default=None)
+    website_style_suggested: bool = False
+
     services: list[ServiceInfo] = Field(
         default_factory=list,
         description="Services offered by the business."

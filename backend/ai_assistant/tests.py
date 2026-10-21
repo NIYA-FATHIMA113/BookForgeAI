@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from rest_framework.test import APIClient
 from django.contrib.auth.models import User
-from ai_assistant.services.ai_provider import extract_time_range
+from ai_assistant.services.ai_provider import extract_time_range, normalize_time_text
 from ai_assistant.schemas import BookingRequest, BusinessInfo
 from ai_assistant.services.ai_provider import (
 	extract_booking_request,
@@ -12,10 +12,12 @@ from ai_assistant.services.ai_provider import (
 	normalize_messages,
 	parse_json_response,
 	assert_fallback_business_info,
+	extract_business_info,
 )
 from ai_assistant.models import AIConversation, BusinessConfiguration
 from ai_assistant.services.business_setup import create_business_from_configuration
 from ai_assistant.views import get_onboarding_question
+from ai_assistant.services.onboarding import get_onboarding_placeholder
 from services.models import Service, Resource
 from availability.models import BusinessHours
 from tenants.models import Tenant
@@ -83,11 +85,8 @@ class AIProviderTests(TestCase):
 			["business_type", "services", "working_days"],
 		)
 
-		self.assertEqual(
-			question,
-			"Great! I'll help you set up Niya Turf. "
-			"What type of business do you run?",
-		)
+		self.assertIn("Niya Turf", question)
+		self.assertTrue("type" in question.lower() or "kind of business" in question.lower())
 
 	def test_services_answer_advances_authenticated_onboarding(self):
 		user = User.objects.create_user(
@@ -250,6 +249,75 @@ class AIProviderTests(TestCase):
 			"5-a-side football", "7-a-side football",
 		])
 
+	def test_natural_identity_phrase_extracts_name_type_and_city(self):
+		info = assert_fallback_business_info("I own a restaurant named Heema in Calicut.")
+		self.assertEqual(info.business_name, "Heema")
+		self.assertEqual(info.business_type, "restaurant")
+		self.assertEqual(info.location, "Calicut")
+
+	def test_all_business_details_can_be_given_in_one_message(self):
+		info = assert_fallback_business_info(
+			"I own a restaurant named Heema in Calicut. We serve Kerala cuisine and seafood. "
+			"We are open daily from 11 AM to 11 PM and have 20 tables. "
+			"Phone number: +91 9876543210, email: owner@example.com."
+		)
+		self.assertEqual(info.business_name, "Heema")
+		self.assertEqual(info.business_type, "restaurant")
+		self.assertEqual(info.location, "Calicut")
+		self.assertEqual([service.name for service in info.services], ["Kerala cuisine", "seafood"])
+		self.assertEqual((info.opening_time, info.closing_time), ("11:00", "23:00"))
+		self.assertEqual(info.working_days, ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
+		self.assertEqual(info.number_of_resources, 20)
+		self.assertEqual(info.contact_email, "owner@example.com")
+
+	def test_all_extraction_providers_can_fail_without_losing_deterministic_fallback(self):
+		with patch("ai_assistant.services.ai_provider.extract_business_info_with_groq", side_effect=RuntimeError("offline")), \
+			patch("ai_assistant.services.ai_provider.extract_business_info_with_gemini", side_effect=RuntimeError("offline")), \
+			patch("ai_assistant.services.ai_provider.extract_business_info_with_openrouter", side_effect=RuntimeError("offline")):
+			provider_result = extract_business_info("I run a salon called Glow Studio.")
+		fallback = assert_fallback_business_info("I run a salon called Glow Studio.")
+		self.assertIsNone(provider_result.business_name)
+		self.assertEqual(fallback.business_name, "Glow Studio")
+		self.assertEqual(fallback.business_type, "salon")
+
+	def test_contextual_bare_menu_and_resource_answers_are_extracted(self):
+		menu = assert_fallback_business_info(
+			"Kerala cuisine, seafood, vegetarian dishes",
+			expected_fields=["services"],
+			business_type="restaurant",
+		)
+		self.assertEqual([service.name for service in menu.services], [
+			"Kerala cuisine", "seafood", "vegetarian dishes",
+		])
+		capacity = assert_fallback_business_info(
+			"20 dining tables", expected_fields=["number_of_resources"], business_type="restaurant"
+		)
+		self.assertEqual(capacity.number_of_resources, 20)
+
+	def test_natural_hours_days_and_closing_day_normalize(self):
+		self.assertEqual(normalize_time_text("11 in the morning"), "11:00")
+		self.assertEqual(normalize_time_text("11 at night"), "23:00")
+		info = assert_fallback_business_info("We are open all week from 11 in the morning until 11 at night, except Monday.")
+		self.assertEqual(info.opening_time, "11:00")
+		self.assertEqual(info.closing_time, "23:00")
+		self.assertEqual(info.working_days, ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
+		closed = assert_fallback_business_info("We close on Sundays.")
+		self.assertEqual(closed.working_days, ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
+
+	def test_ambiguous_clock_times_are_not_guessed(self):
+		info = assert_fallback_business_info("We open from 10 to 8 daily.")
+		self.assertIsNone(info.opening_time)
+		self.assertIsNone(info.closing_time)
+
+	def test_question_wording_varies_by_category_and_placeholder(self):
+		configuration = BusinessInfo(business_name="Coastal Table", business_type="restaurant")
+		first = get_onboarding_question(configuration, ["services"], variation=0)
+		second = get_onboarding_question(configuration, ["services"], variation=1)
+		self.assertNotEqual(first, second)
+		self.assertIn("menu", first.lower())
+		self.assertEqual(get_onboarding_placeholder("services", "restaurant"), "e.g. Kerala cuisine, seafood, vegetarian dishes")
+		self.assertIn("treatment", get_onboarding_question(BusinessInfo(business_type="salon"), ["services"]).lower())
+
 	def test_shared_football_pitches_are_counted(self):
 		info = assert_fallback_business_info(
 			"We have two shared football pitches available for bookings."
@@ -286,6 +354,74 @@ class BusinessJourneyTests(TestCase):
 		self.configuration.refresh_from_db()
 		self.assertEqual(self.configuration.number_of_resources, 2)
 		self.assertNotIn("How many bookable resources", response.data["message"])
+
+	def test_location_correction_updates_only_location(self):
+		with patch("ai_assistant.views.extract_business_info", return_value=BusinessInfo()):
+			response = self.client.post("/api/ai/chat/", {
+				"conversation_id": self.conversation.id,
+				"message": "Actually, the business is in Kozhikode, not Kochi.",
+			}, format="json")
+		self.assertEqual(response.status_code, 200, response.data)
+		self.configuration.refresh_from_db()
+		self.assertEqual(self.configuration.business_name, "Hightown Turf")
+		self.assertEqual(self.configuration.business_type, "sports_turf")
+		self.assertEqual(self.configuration.location, "Kozhikode")
+		self.assertEqual(self.configuration.services[0]["name"], "5-a-side football")
+
+	def test_complete_setup_asks_for_website_style_before_review(self):
+		self.configuration.website_style = ""
+		self.configuration.contact_details_reviewed = True
+		self.configuration.save()
+		with patch("ai_assistant.views.extract_business_info", return_value=BusinessInfo()):
+			response = self.client.post("/api/ai/chat/", {
+				"conversation_id": self.conversation.id,
+				"message": "I am not sure yet.",
+			}, format="json")
+		self.assertEqual(response.status_code, 200, response.data)
+		self.assertEqual(response.data["next_topic"], "website_style")
+		self.assertFalse(response.data["is_complete"])
+		self.assertIn("modern", response.data["input_placeholder"].lower())
+
+	def test_delegated_style_is_suggested_and_labeled_in_summary(self):
+		self.configuration.contact_details_reviewed = True
+		self.configuration.save()
+		with patch("ai_assistant.views.extract_business_info", return_value=BusinessInfo()):
+			response = self.client.post("/api/ai/chat/", {
+				"conversation_id": self.conversation.id,
+				"message": "You choose what fits my sports turf best.",
+			}, format="json")
+		self.assertEqual(response.status_code, 200, response.data)
+		self.configuration.refresh_from_db()
+		self.assertEqual(self.configuration.website_style, "bold")
+		self.assertTrue(self.configuration.website_style_suggested)
+		self.assertIn("AI suggestion", response.data["message"])
+		self.assertEqual(response.data["business_configuration"]["website_style"], "bold")
+
+	def test_contact_details_can_be_skipped_and_are_not_asked_again(self):
+		self.configuration.website_style = "warm"
+		self.configuration.contact_details_reviewed = False
+		self.configuration.save()
+		with patch("ai_assistant.views.extract_business_info", return_value=BusinessInfo()):
+			response = self.client.post("/api/ai/chat/", {
+				"conversation_id": self.conversation.id,
+				"message": "skip for now",
+			}, format="json")
+		self.assertEqual(response.status_code, 200, response.data)
+		self.configuration.refresh_from_db()
+		self.assertTrue(self.configuration.contact_details_reviewed)
+		self.assertNotEqual(response.data["next_topic"], "contact_details")
+
+	def test_ambiguous_hours_request_clarification_and_preserve_stored_hours(self):
+		with patch("ai_assistant.views.extract_business_info", return_value=BusinessInfo()):
+			response = self.client.post("/api/ai/chat/", {
+				"conversation_id": self.conversation.id,
+				"message": "Actually, make the hours 10 to 8 daily.",
+			}, format="json")
+		self.assertEqual(response.status_code, 200, response.data)
+		self.assertIn("AM or PM", response.data["message"])
+		self.configuration.refresh_from_db()
+		self.assertEqual(self.configuration.opening_time, time(6, 0))
+		self.assertEqual(self.configuration.closing_time, time(23, 0))
 
 	def test_confirmation_saves_edited_service_price_and_duration(self):
 		response = self.client.post("/api/ai/confirm/", {

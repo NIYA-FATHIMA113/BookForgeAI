@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiRequest } from "../services/api";
 import ReactMarkdown from "react-markdown";
@@ -9,6 +9,10 @@ function AISetup() {
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
+  const [inputPlaceholder, setInputPlaceholder] = useState("e.g. Restaurant name, type, and city");
+  const [chatError, setChatError] = useState("");
+  const [retryMessage, setRetryMessage] = useState("");
+  const messagesEndRef = useRef(null);
   const [showPreview, setShowPreview] = useState(false);
   const [websiteStyle, setWebsiteStyle] = useState("auto");
   const [websiteTemplate, setWebsiteTemplate] = useState("auto");
@@ -43,55 +47,33 @@ function AISetup() {
     bookingLength: "",
   });
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, aiLoading]);
 
- async function handleSend(e) {
-  e.preventDefault();
 
-  if (!message.trim() || aiLoading) {
-    return;
-  }
+  async function sendChatMessage(userMessage, { appendUserMessage = true } = {}) {
+    if (!userMessage.trim() || aiLoading) return;
+    if (appendUserMessage) {
+      setMessages((current) => [...current, { role: "user", text: userMessage }]);
+    }
+    setChatError("");
+    setAiLoading(true);
 
-  const userMessage = message.trim();
+    try {
+      const data = await apiRequest("/api/ai/chat/", {
+        method: "POST",
+        body: JSON.stringify({
+          message: userMessage,
+          ...(conversationId ? { conversation_id: conversationId } : {}),
+        }),
+      });
 
-  setMessages((current) => [
-    ...current,
-    {
-      role: "user",
-      text: userMessage,
-    },
-  ]);
-
-  setMessage("");
-  setAiLoading(true);
-
-  try {
-    const data = await apiRequest("/api/ai/chat/", {
-      method: "POST",
-
-      body: JSON.stringify({
-        message: userMessage,
-
-        ...(conversationId
-          ? {
-              conversation_id: conversationId,
-            }
-          : {}),
-      }),
-    });
-
-    console.log("AI RESPONSE:", data);
-
-    // Save conversation ID returned by Django
-    setConversationId(data.conversation_id);
-
-    // Display real AI response
-    setMessages((current) => [
-      ...current,
-      {
-        role: "assistant",
-        text: data.message,
-      },
-    ]);
+      setMessage("");
+      setRetryMessage("");
+      setConversationId(data.conversation_id);
+      setMessages((current) => [...current, { role: "assistant", text: data.message }]);
+      setInputPlaceholder(data.input_placeholder || "Tell me a little more about your business...");
 
     // Update preview data from real configuration
     if (data.business_configuration) {
@@ -101,6 +83,7 @@ function AISetup() {
         const templatePrefix = normalizedType === "sports_turf" ? "sports" : normalizedType;
         setWebsiteTemplate((current) => current === "auto" || current.startsWith(`${templatePrefix}_`) ? current : "auto");
       }
+      if (config.website_style) setWebsiteStyle(config.website_style);
 
       setBusiness((current) => ({
         ...current,
@@ -191,26 +174,27 @@ if (setupComplete) {
 }
     }
 
-  } catch (error) {
-    console.error(
-      "AI chat failed:",
-      error
-    );
-
-    setMessages((current) => [
-      ...current,
-      {
-        role: "assistant",
-        text:
-          "Sorry, something went wrong: " +
-          error.message,
-      },
-    ]);
-
-  } finally {
-    setAiLoading(false);
+    } catch (error) {
+      setRetryMessage(userMessage);
+      setChatError(error.message
+        ? `I couldn't save that reply: ${error.message}. Your message is still here; you can retry.`
+        : "I couldn't save that reply. Your message is still here; please retry.");
+    } finally {
+      setAiLoading(false);
+    }
   }
-}
+
+  function handleSend(event) {
+    event.preventDefault();
+    sendChatMessage(message.trim());
+  }
+
+  function handleMessageKeyDown(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  }
 
 const handleConfirm = async () => {
   try {
@@ -366,10 +350,7 @@ const handleConfirm = async () => {
                 Example:
               </p>
 
-              <div className="example-message">
-                I run a beauty salon offering
-                haircuts, facials and hair spa.
-              </div>
+              <div className="example-message">For example, share your business name, type, and city in one message.</div>
             </div>
           )}
 
@@ -394,23 +375,29 @@ const handleConfirm = async () => {
             </div>
           ))}
 
+          {aiLoading && <div className="ai-message assistant ai-typing" role="status" aria-live="polite"><strong>BookForge AI</strong><p><span /><span /><span /> Thinking through your setup…</p></div>}
+          <div ref={messagesEndRef} />
+
         </div>
+
+        {chatError && <div className="ai-chat-error" role="alert"><span>{chatError}</span><button type="button" onClick={() => sendChatMessage(retryMessage, { appendUserMessage: false })} disabled={aiLoading}>Retry</button></div>}
 
         <form
           className="ai-chat-form"
           onSubmit={handleSend}
         >
-          <input
-            type="text"
-            placeholder="Describe your business..."
+          <textarea
+            rows={2}
+            placeholder={inputPlaceholder}
             value={message}
-            onChange={(e) =>
-              setMessage(e.target.value)
-            }
+            onChange={(event) => setMessage(event.target.value)}
+            onKeyDown={handleMessageKeyDown}
+            aria-label="Your reply to BookForge AI"
+            disabled={aiLoading}
           />
 
-          <button type="submit">
-            Send
+          <button type="submit" disabled={aiLoading || !message.trim()}>
+            {aiLoading ? "Sending…" : "Send"}
           </button>
         </form>
 
@@ -503,6 +490,11 @@ const handleConfirm = async () => {
                     })
                   }
                 />
+              </label>
+
+              <label>
+                Email
+                <input readOnly value={business.email} placeholder="Optional customer-facing email" />
               </label>
 
             </div>

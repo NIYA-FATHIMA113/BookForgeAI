@@ -1,4 +1,5 @@
 from decimal import Decimal, InvalidOperation
+import re
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -19,6 +20,8 @@ from .serializers import AIChatSerializer
 from .services.ai_provider import (
     extract_business_info,
     assert_fallback_business_info,
+    normalize_time_text,
+    extract_time_range,
 )
 
 from .services.business_config import (
@@ -32,6 +35,13 @@ from .services.business_setup import (
 # Keep this for now only if you still want the
 # customer-facing AI booking endpoint as a future feature.
 from .services.booking_ai import process_booking_request
+from .services.onboarding import (
+    get_next_onboarding_topic,
+    get_onboarding_placeholder,
+    get_onboarding_question as render_onboarding_question,
+    get_setup_summary,
+    suggest_website_style,
+)
 
 
 def validate_preview_services(value):
@@ -71,123 +81,12 @@ def validate_preview_services(value):
     return normalized
 
 
-def get_onboarding_question(configuration, missing_fields):
-    """Return the next setup question from the existing required fields."""
-
-    business_name = configuration.business_name
-    prefix = (
-        f"Great! I'll help you set up {business_name}. "
-        if business_name
-        else "Let's set up your business. "
-    )
-
-    questions = {
-        "business_name": "What is your business name?",
-        "business_type": "What type of business do you run?",
-        "services": (
-            "What services or facilities do you offer? "
-            "Please include the service names."
-        ),
-        "opening_time": (
-            "What are your business hours? "
-            "Please provide both opening and closing times."
-        ),
-        "closing_time": (
-            "What are your business hours? "
-            "Please provide both opening and closing times."
-        ),
-        "working_days": "Which days of the week are you open?",
-        "number_of_resources": (
-            "How many bookable resources do you have, such as "
-            "pitches, rooms, chairs, or tables?"
-        ),
-    }
-
-    next_field = next(
-        (field for field in missing_fields if field in questions),
-        None,
-    )
-
-    if not next_field:
-        return None
-
-    return prefix + questions[next_field]
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from drf_spectacular.utils import extend_schema
-from .models import (
-    AIConversation,
-    AIMessage,
-    BusinessConfiguration,
-)
-from .services.configuration_validator import (
-    validate_business_configuration,
-)
-
-from .serializers import AIChatSerializer
-
-from .services.ai_provider import (
-    extract_business_info,
-    assert_fallback_business_info,
-)
-
-from .services.business_config import (
-    update_business_configuration,
-)
-
-from .services.business_setup import (
-    create_business_from_configuration,
-)
-
-# Keep this for now only if you still want the
-# customer-facing AI booking endpoint as a future feature.
-from .services.booking_ai import process_booking_request
-
-
-def get_onboarding_question(configuration, missing_fields):
-    """Return the next setup question from the existing required fields."""
-
-    business_name = configuration.business_name
-    prefix = (
-        f"Great! I'll help you set up {business_name}. "
-        if business_name
-        else "Let's set up your business. "
-    )
-
-    questions = {
-        "business_name": "What is your business name?",
-        "business_type": "What type of business do you run?",
-        "services": (
-            "What services or facilities do you offer? "
-            "Please include the service names."
-        ),
-        "opening_time": (
-            "What are your business hours? "
-            "Please provide both opening and closing times."
-        ),
-        "closing_time": (
-            "What are your business hours? "
-            "Please provide both opening and closing times."
-        ),
-        "working_days": "Which days of the week are you open?",
-        "number_of_resources": (
-            "How many bookable resources do you have, such as "
-            "pitches, rooms, chairs, or tables?"
-        ),
-    }
-
-    next_field = next(
-        (field for field in missing_fields if field in questions),
-        None,
-    )
-
-    if not next_field:
-        return None
-
-    return prefix + questions[next_field]
+def get_onboarding_question(configuration, missing_fields, variation=0):
+    """Compatibility wrapper used by tests and the onboarding endpoint."""
+    topic = get_next_onboarding_topic(configuration, missing_fields)
+    if topic is None and missing_fields:
+        topic = missing_fields[0]
+    return render_onboarding_question(configuration, topic, variation) if topic else None
 
 @extend_schema(
     request=AIChatSerializer,
@@ -279,25 +178,34 @@ class AIChatView(APIView):
         # 5. Extract and save configuration
         # -----------------------------
 
+        existing_configuration = BusinessConfiguration.objects.filter(conversation=conversation).first()
+        existing_validation = validate_business_configuration(existing_configuration) if existing_configuration else {
+            "missing_fields": ["business_name", "business_type", "services", "opening_time", "closing_time", "working_days", "number_of_resources"]
+        }
+        expected_fields = existing_validation["missing_fields"]
         business_info = extract_business_info(message)
-
-        # If the provider path returns an empty BusinessInfo or one that has not
-        # surfaced the owner fields, route to a deterministic parser over the
-        # current message. This keeps the transition from field extraction to
-        # validator and question generator driven by Django state.
-        fallback_info = assert_fallback_business_info(message)
-        if fallback_info.business_name:
-            business_info.business_name = fallback_info.business_name
-        if not business_info.business_type:
-            business_info.business_type = fallback_info.business_type
-        if not business_info.opening_time:
-            business_info.opening_time = fallback_info.opening_time
-        if not business_info.closing_time:
-            business_info.closing_time = fallback_info.closing_time
-        if not business_info.working_days:
-            business_info.working_days = fallback_info.working_days
-        if business_info.number_of_resources is None:
-            business_info.number_of_resources = fallback_info.number_of_resources
+        fallback_expected_fields = expected_fields
+        if business_info.services:
+            fallback_expected_fields = [field for field in expected_fields if field != "services"]
+        fallback_info = assert_fallback_business_info(
+            message,
+            expected_fields=fallback_expected_fields,
+            business_type=existing_configuration.business_type if existing_configuration else "",
+        )
+        # Explicitly parsed values are authoritative for corrections. Empty
+        # extraction values never clear previously collected information.
+        for field_name in (
+            "business_name", "business_type", "opening_time", "closing_time",
+            "working_days", "number_of_resources", "location", "contact_phone",
+            "contact_email", "booking_deposit", "booking_length_minutes", "website_style",
+        ):
+            fallback_value = getattr(fallback_info, field_name, None)
+            if fallback_value not in (None, "", []):
+                setattr(business_info, field_name, fallback_value)
+        business_info.website_style_suggested = fallback_info.website_style_suggested
+        for field_name in ("opening_time", "closing_time"):
+            value = normalize_time_text(getattr(business_info, field_name, None))
+            setattr(business_info, field_name, value)
         for field_name in (
             "location",
             "contact_phone",
@@ -335,6 +243,16 @@ class AIChatView(APIView):
             conversation,
             business_info,
         )
+        skip_contact = bool(re.search(r"\b(?:skip|none|no thanks|not now|no contact details)\b", message, flags=re.I))
+        if configuration.contact_phone or configuration.contact_email or skip_contact:
+            if not configuration.contact_details_reviewed:
+                configuration.contact_details_reviewed = True
+                configuration.save(update_fields=["contact_details_reviewed", "updated_at"])
+        if configuration.website_style_suggested and configuration.business_type:
+            suggested_style = suggest_website_style(configuration.business_type)
+            if configuration.website_style != suggested_style:
+                configuration.website_style = suggested_style
+                configuration.save(update_fields=["website_style", "updated_at"])
         validation = validate_business_configuration(
             configuration
         )
@@ -343,16 +261,32 @@ class AIChatView(APIView):
         # 6. Generate setup or assistant response
         # -----------------------------
 
-        if validation["is_complete"]:
+        setup_missing_fields = list(validation["missing_fields"])
+        ambiguous_hours = bool(
+            re.search(r"\b\d{1,2}(?::\d{2})?\s*(?:to|until|[-–])\s*\d{1,2}(?::\d{2})?\b", message, flags=re.I)
+            and not extract_time_range(message)[0]
+        )
+        if ambiguous_hours and "opening_time" not in setup_missing_fields:
+            setup_missing_fields.insert(0, "opening_time")
+        if not validation["missing_fields"] and not configuration.contact_details_reviewed:
+            setup_missing_fields.append("contact_details")
+        if not validation["missing_fields"] and not configuration.website_style:
+            setup_missing_fields.append("website_style")
+        next_topic = get_next_onboarding_topic(configuration, setup_missing_fields)
+        setup_ready = not setup_missing_fields and not ambiguous_hours
+
+        if setup_ready:
             ai_response = (
-                "Your business configuration is ready for review. "
-                "Check the preview below, then confirm to create your booking website."
+                "Here's what I've gathered. Please review the summary and preview below. "
+                "You can correct any detail here before confirming:\n\n"
+                f"{get_setup_summary(configuration)}\n\n"
+                "Does everything look right? Confirm in the preview when you're ready to create the website."
             )
+        elif ambiguous_hours:
+            ai_response = "I can't tell whether those times are AM or PM. Could you clarify both opening and closing times?"
         else:
-            ai_response = get_onboarding_question(
-                configuration,
-                validation["missing_fields"],
-            )
+            variation = AIMessage.objects.filter(conversation=conversation, role="assistant").count()
+            ai_response = render_onboarding_question(configuration, next_topic, variation)
 
         # -----------------------------
         # 7. Save AI response
@@ -382,6 +316,9 @@ class AIChatView(APIView):
                     "business_type": (
                         configuration.business_type
                     ),
+
+                    "website_style": configuration.website_style,
+                    "website_style_suggested": configuration.website_style_suggested,
 
                     "services": (
                         configuration.services
@@ -419,20 +356,19 @@ class AIChatView(APIView):
                         configuration.booking_length_minutes
                     ),
 
-                    "is_complete": (
-                        configuration.is_complete
-                    ),
-                    "missing_fields": (
-                        configuration.get_missing_fields()
-                    ),
+                    "is_complete": setup_ready,
+                    "missing_fields": setup_missing_fields,
                     "number_of_resources": (
                         configuration.number_of_resources
                     ),
                     "configuration_status": {
-                        "is_complete": validation["is_complete"],
-                        "missing_fields": validation["missing_fields"],
+                        "is_complete": setup_ready,
+                        "missing_fields": setup_missing_fields,
                     },
                 },
+                "next_topic": next_topic,
+                "input_placeholder": get_onboarding_placeholder(next_topic, configuration.business_type),
+                "is_complete": setup_ready,
             },
             status=status.HTTP_200_OK,
         )
@@ -577,7 +513,7 @@ class AIConfirmSetupView(APIView):
                 configuration,
                 request.user,
                 configuration.services,
-                request.data.get("website_style", "auto"),
+                request.data.get("website_style") or configuration.website_style or "auto",
                 request.data.get("website_font", "classic"),
                 request.data.get("business_name_font", "editorial"),
                 request.data.get("website_template", "auto"),
@@ -811,7 +747,7 @@ class AIConfirmSetupView(APIView):
                 configuration,
                 request.user,
                 configuration.services,
-                request.data.get("website_style", "auto"),
+                request.data.get("website_style") or configuration.website_style or "auto",
                 request.data.get("website_font", "classic"),
                 request.data.get("business_name_font", "editorial"),
                 request.data.get("website_template", "auto"),

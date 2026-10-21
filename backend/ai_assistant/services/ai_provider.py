@@ -319,120 +319,92 @@ def normalize_day_name(value):
 
 
 def normalize_time_text(value):
-    """Convert common AI-extracted time strings into 24-hour HH:MM."""
+    """Convert explicit natural-language time expressions to HH:MM."""
     if not value:
         return None
-
-    text = str(value).strip().lower()
-    text = text.replace(".", "").replace(";", "")
-
-    # If already a pure HH:MM expression.
-    if re.fullmatch(r"\d{1,2}:\d{2}", text):
-        pieces = text.split(":")
-        hour = int(pieces[0])
-        minute = int(pieces[1])
-        if hour > 23 or minute > 59:
-            return None
-        return f"{hour:02d}:{minute:02d}"
-
-    match = re.fullmatch(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)", text)
-    if match:
-        hour = int(match.group(1))
-        minute = int(match.group(2) or 0)
-        meridian = match.group(3)
-        if meridian == "am":
-            if hour == 12:
-                hour = 0
-        else:
-            if hour != 12:
-                hour += 12
-        if hour > 23 or minute > 59:
-            return None
-        return f"{hour:02d}:{minute:02d}"
-
-    # Fallback for parser output that has a different layout.
-    try:
-        from datetime import datetime
-        parsed = datetime.strptime(text, "%I:%M %p")
-        return parsed.strftime("%H:%M")
-    except Exception:
+    text = str(value).strip().lower().replace('.', '').replace(';', '')
+    number_words = {
+        "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+        "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+        "eleven": "11", "twelve": "12",
+    }
+    text = re.sub(r"\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b", lambda match: number_words[match.group(1)], text)
+    if re.search(r"\b(?:noon|midday)\b", text):
+        return "12:00"
+    if re.search(r"\bmidnight\b", text):
+        return "00:00"
+    match = re.search(r"\b(\d{1,2})(?::(\d{2}))?\b", text)
+    if not match:
         return None
+    hour = int(match.group(1))
+    minute = int(match.group(2) or 0)
+    if hour > 23 or minute > 59:
+        return None
+    meridiem = re.search(r"\b(am|pm)\b", text)
+    if meridiem:
+        if not 1 <= hour <= 12:
+            return None
+        if meridiem.group(1) == "am":
+            hour = 0 if hour == 12 else hour
+        else:
+            hour = 12 if hour == 12 else hour + 12
+    elif re.search(r"\b(?:morning)\b", text):
+        hour = 0 if hour == 12 else hour
+    elif re.search(r"\b(?:afternoon|evening|night)\b", text):
+        hour = 12 if hour == 12 else hour + 12
+    elif hour <= 12 and not re.fullmatch(r"\s*\d{1,2}:\d{2}\s*", text):
+        # A bare 10 or 10:00 may mean either morning or evening.
+        return None
+    return f"{hour:02d}:{minute:02d}"
 
 
 def extract_time_range(text):
-    """Return (opening_time, closing_time) from a message with a natural time range."""
+    """Return normalized hours; incomplete or ambiguous meridiems stay unset."""
     if not text:
         return (None, None)
-
-    value = str(text).strip()
-    patterns = [
-        r"(?P<open>\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)\s*(?:to|-|–)\s*(?P<close>\d{1,2}(?::\d{2})?\s*(?:AM|PM|am|pm)?)",
-        r"(?P<open>\d{1,2}:\d{2})\s*(?:to|-|–)\s*(?P<close>\d{1,2}:\d{2})",
-    ]
-
-    for pattern in patterns:
-        match = re.search(pattern, value, flags=re.I)
-        if not match:
-            continue
-
-        open_text = match.group("open")
-        close_text = match.group("close")
-        open_24 = normalize_time_text(open_text)
-        close_24 = normalize_time_text(close_text)
-        if open_24 and close_24:
-            return open_24, close_24
-
-    # Otherwise capture first two explicit HH:MM values in the message.
-    hms = re.findall(r"\d{1,2}:\d{2}", value)
-    if len(hms) >= 2:
-        return hms[0], hms[1]
-
+    token = r"(?:\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?::\d{2})?(?:\s*(?:a\.?m\.?|p\.?m\.?|in the morning|in the afternoon|in the evening|at night))?"
+    match = re.search(rf"(?P<open>{token})\s*(?:to|until|through|[-\u2013])\s*(?P<close>{token})", str(text), flags=re.I)
+    if match:
+        opening = normalize_time_text(match.group("open"))
+        closing = normalize_time_text(match.group("close"))
+        if opening and closing:
+            return opening, closing
+    value = str(text)
+    opening_match = re.search(rf"\b(?:open|opens|opening)\b(?:\s+at)?\s+(?P<time>{token})", value, flags=re.I)
+    closing_match = re.search(rf"\b(?:close|closes|closing)\b(?:\s+at)?\s+(?P<time>{token})", value, flags=re.I)
+    if opening_match and closing_match:
+        opening = normalize_time_text(opening_match.group("time"))
+        closing = normalize_time_text(closing_match.group("time"))
+        if opening and closing:
+            return opening, closing
     return (None, None)
 
 
 def expand_working_days_from_text(text):
-    """Return a day list expanded from day range or list text in the owner message."""
+    """Expand weekly ranges and common open/closed-day phrases."""
     if not text:
         return []
-
     raw = str(text)
     lower = raw.lower()
-    ordered = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday",
-    ]
-
-    if re.search(r"\b(?:daily|every day|all week|7 days a week)\b", lower, flags=re.I):
-        return ordered
-
+    ordered = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    if re.search(r"\b(?:daily|every day|all week|7 days a week|open all week)\b", lower):
+        excluded = set()
+        exclusion = re.search(r"\b(?:except|excluding|closed|close|off)\b(.+)$", lower)
+        if exclusion:
+            excluded = set(re.findall(r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", exclusion.group(1)))
+        return [day for day in ordered if day.lower() not in excluded]
+    closed = set(re.findall(r"\b(?:close|closed|off)\s+(?:on\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?\b", lower))
+    if closed:
+        return [day for day in ordered if day.lower() not in closed]
     range_match = re.search(r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b\s*(?:to|through|thru|-)\s*\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", lower, flags=re.I)
     if range_match:
         start = normalize_day_name(range_match.group(1))
         end = normalize_day_name(range_match.group(2))
-        try:
-            start_idx = ordered.index(start)
-            end_idx = ordered.index(end)
-            if end_idx < start_idx:
-                end_idx += len(ordered)
-            days = ordered[start_idx:end_idx + 1]
-            # Keep a simple week view and remove duplicates from the same range.
-            return [d for d in days if d]
-        except ValueError:
-            pass
-
-    # For a list like 'Monday, Wednesday and Friday', recover explicit matches.
-    explicit_days = []
-    for day in ordered:
-        if re.search(rf"\b{day}\b", raw, flags=re.I):
-            explicit_days.append(day)
-
-    return explicit_days
-
+        start_index, end_index = ordered.index(start), ordered.index(end)
+        if end_index < start_index:
+            end_index += len(ordered)
+        return [ordered[index % len(ordered)] for index in range(start_index, end_index + 1)]
+    return [day for day in ordered if re.search(rf"\b{day}\b", raw, flags=re.I)]
 
 def normalize_business_type(value):
     """Normalize the stored business type for the project bookkeeping."""
@@ -460,42 +432,103 @@ def normalize_business_type(value):
     return mapping.get(text, text)
 
 
-def assert_fallback_business_info(text):
-    """
-    Deterministic fallback parser for the message currently being processed.
-    It safely extracts fields even when all LLM providers fail or return
-    an empty structured object.
-    """
+def assert_fallback_business_info(text, expected_fields=None, business_type=""):
+    """Extract explicit onboarding details without relying on exact keywords."""
     info = BusinessInfo()
-    message = str(text or "")
+    message = str(text or "").strip()
     lower = message.lower()
+    expected_fields = list(expected_fields or [])
 
-    # Preserve the business name by taking the exact phrase after 'called'.
-    match = re.search(
-        r"\b(?:called|named|known as)\s+([A-Za-z0-9][A-Za-z0-9\s&'\-\.]+?)(?:[.?!,]|$)",
-        message,
-        flags=re.I,
+    category_patterns = (
+        ("sports_turf", r"\b(?:football[ _]turf|sports[ _]turf|turf|football\s+ground|football\s+pitch|sports\s+facility)\b"),
+        ("salon", r"\b(?:beauty\s+salon|hair\s+salon|salon)\b"),
+        ("clinic", r"\b(?:dental\s+clinic|clinic|dentist|dental)\b"),
+        ("restaurant", r"\b(?:restaurant|cafe|coffee\s+shop)\b"),
     )
-    if not match:
-        match = re.search(
-            r"\b(?:I run|I own|my business is|our business is)\s+([A-Za-z0-9][A-Za-z0-9\s&'\-\.]*?)(?=[.!?,]|\s+we\s+offer\b|$)",
-            message,
-            flags=re.I,
-        )
-    if match:
-        candidate = match.group(1).strip()
-        if candidate:
+    for category, pattern in category_patterns:
+        if re.search(pattern, lower):
+            info.business_type = category
+            break
+    known_type = business_type or info.business_type
+
+    name_patterns = (
+        r"\b(?:called|named|known as)\s+(.+?)(?=[.!?]|$)",
+        r"\b(?:let's call it|call the business|our shop is|my shop is|our name is)\s+(.+?)(?=[.!?]|$)",
+        r"\b(?:business name|name)\s*(?:is|:)?\s+(.+?)(?=[.!?]|$)",
+        r"\b(?:I run|I own|my business is|our business is)\s+(.+?)(?=[.!?]|$)",
+    )
+    for pattern in name_patterns:
+        match = re.search(pattern, message, flags=re.I)
+        if not match:
+            continue
+        candidate = match.group(1).strip(" ,;:")
+        candidate = re.split(r",\s*(?:a|an|we|our|and we|based|located)\b", candidate, maxsplit=1, flags=re.I)[0]
+        candidate = re.split(r"\s+(?:located|based)\s+(?:in|at)\s+|\s+in\s+(?=[A-Z])", candidate, maxsplit=1, flags=re.I)[0]
+        candidate = re.sub(r"^(?:a|an|the)\s+", "", candidate, flags=re.I)
+        if info.business_type and candidate.casefold().endswith(" " + info.business_type.casefold()):
+            candidate = candidate[:-(len(info.business_type) + 1)].strip()
+        if candidate and not re.match(r"^(?:located|based|in|at)\b", candidate, flags=re.I) and len(candidate) <= 200 and candidate.casefold() not in {"a restaurant", "a salon", "a clinic", "a turf"}:
+            info.business_name = candidate
+            break
+    if not info.business_name:
+        direct = re.search(r"^\s*([A-Z][\w&'?.-]*(?:\s+[A-Z][\w&'?.-]*)*)\s+is\s+(?:a|an)\s+(?:restaurant|cafe|coffee shop|salon|clinic|turf)\b", message, flags=re.I)
+        if direct:
+            info.business_name = direct.group(1).strip()
+    if not info.business_name and "business_name" in expected_fields and len(message) <= 100 and not re.search(r"[?!\n]", message):
+        candidate = re.sub(r"^(?:it's|it is|we are|our name is)\s+", "", message.strip(), flags=re.I)
+        candidate = re.split(r"\s+(?:in|at)\s+", candidate, maxsplit=1, flags=re.I)[0]
+        candidate = re.sub(r"^(?:a|an|the)\s+", "", candidate, flags=re.I).strip(" ,.")
+        if info.business_type and candidate.casefold().endswith(" " + info.business_type.casefold()):
+            candidate = candidate[:-(len(info.business_type) + 1)].strip()
+        non_name = r"\b(?:open|closed|daily|every day|services?|hours?|tables?|pitches?|rooms?|chairs?|am|pm|restaurant|cafe|salon|clinic|dentist|dental|business|we have|i have)\b"
+        if candidate and not info.website_style and not re.search(non_name, candidate, flags=re.I) and not re.search(r"@|\d{7,}", candidate) and not extract_time_range(candidate)[0]:
             info.business_name = candidate
 
-    # Business type from football turf / sport turf wording.
-    if re.search(r"\bfootball\s+turf\b|\bsports\s+turf\b|\bturf\b|\bfootball\s+ground\b|\bfootball\s+pitch\b", lower):
-        info.business_type = "sports_turf"
-    elif re.search(r"\b(?:beauty\s+)?salon\b", lower):
-        info.business_type = "salon"
-    elif re.search(r"\b(?:dental\s+clinic|dentist|dental)\b", lower):
-        info.business_type = "clinic"
-    elif re.search(r"\b(?:restaurant|cafe|coffee\s+shop)\b", lower):
-        info.business_type = "restaurant"
+    location_patterns = (
+        r"\b(?:located|based|situated)\s+(?:in|at)\s+([^.!?\n]+)",
+        r"\b(?:location|address)\s*(?:is|:)?\s*([^.!?\n]+)",
+        r"\b(?:restaurant|cafe|business|salon|clinic|turf)\s+(?:is\s+)?in\s+([^.!?\n]+)",
+        r"\b(?:named|called)\s+.+?\s+in\s+([A-Z][A-Za-z'?-]*(?:\s+[A-Z][A-Za-z'?-]*)*)",
+        r"\bin\s+([A-Z][A-Za-z'?-]*(?:\s+[A-Z][A-Za-z'?-]*)*)",
+    )
+    for index, pattern in enumerate(location_patterns):
+        if index == 4 and not (
+            {"business_name", "business_type"}.intersection(expected_fields)
+            or re.search(r"^\s*(?:actually|we are|we're|it is|it's)\b", lower)
+        ):
+            continue
+        match = re.search(pattern, message, flags=re.I)
+        if match:
+            location = re.split(r"\s+(?:not|but|and we|and our)\b|[,;]", match.group(1), maxsplit=1, flags=re.I)[0].strip(" .")
+            if location and len(location) <= 300:
+                info.location = location
+                break
+
+    # Select a supported visual style from the owner's language. Delegation is
+    # explicitly marked so the final summary can label it as an AI suggestion.
+    delegate = re.search(r"\b(?:you choose|choose for me|whatever you think|what(?:ever)? fits|your choice|up to you|surprise me|you decide|recommend one)\b", lower)
+    style_patterns = (
+        ("modern", r"\b(?:modern|minimal|minimalist|sleek)\b"),
+        ("elegant", r"\b(?:elegant|luxurious|luxury|premium|sophisticated)\b"),
+        ("warm", r"\b(?:warm|welcoming|cozy|cosy|inviting)\b"),
+        ("nature", r"\b(?:natural|relaxed|organic|botanical)\b"),
+        ("bold", r"\b(?:bold|energetic|vibrant|sporty)\b"),
+        ("playful", r"\b(?:playful|fun|cartoon|cheerful)\b"),
+        ("illustrated", r"\billustrated\b"),
+        ("3d", r"\b3d\b|\bmotion\b"),
+    )
+    for style, pattern in style_patterns:
+        if re.search(pattern, lower):
+            info.website_style = style
+            break
+    if delegate:
+        from .business_setup import BUSINESS_TYPE_MAPPING
+        canonical_type = BUSINESS_TYPE_MAPPING.get(known_type, known_type)
+        category_style = {
+            "restaurant": "warm", "salon": "elegant", "clinic": "modern", "sports_turf": "bold",
+        }
+        info.website_style = category_style.get(canonical_type)
+        info.website_style_suggested = True
 
     # Parse natural service phrasing, keeping duration and price attached to
     # each service when the owner provides a semicolon-separated list.
@@ -506,6 +539,7 @@ def assert_fallback_business_info(text):
         flags=re.I,
     )
     service_infos = []
+    service_text = None
     if service_match:
         service_text = message[service_match.end():]
         service_text = re.split(
@@ -514,6 +548,16 @@ def assert_fallback_business_info(text):
             maxsplit=1,
             flags=re.I,
         )[0]
+    elif (
+        expected_fields
+        and expected_fields[0] == "services"
+        and "?" not in message
+        and not extract_time_range(message)[0]
+        and not re.search(r"\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:dining\s+|treatment\s+|consultation\s+|styling\s+)?(?:tables?|rooms?|chairs?|pitches?|courts?|slots?)\b", lower)
+        and len(message) <= 300
+    ):
+        service_text = message.strip(" .")
+    if service_text:
         service_text = re.sub(
             r"(\d+\s*[- ]?a\s*[- ]?side)\s+and\s+(\d+\s*[- ]?a\s*[- ]?side\s+football)",
             r"\1 football and \2",
@@ -584,14 +628,14 @@ def assert_fallback_business_info(text):
 
     # Number of resources, including common number words.
     resources = re.search(
-        r"\b(?:have|offer|offers|with|including)\s+"
+        r"\b(?:(?:have|offer|offers|with|including)\s+)?"
         r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+"
-        r"(?:(?:shared|bookable|football|indoor|outdoor)\s+){0,3}"
-        r"(?:pitches?|resources?|courts?|tables?|chairs?|rooms?)\b",
+        r"(?:(?:shared|bookable|football|indoor|outdoor|dining|treatment|consultation|styling|appointment)\s+){0,3}"
+        r"(?:pitches?|resources?|courts?|tables?|chairs?|rooms?|slots?)\b",
         message,
         flags=re.I,
     )
-    if resources:
+    if resources and ("number_of_resources" in expected_fields or re.search(r"\b(?:have|offer|offers|with|including)\b", message, flags=re.I)):
         count = resources.group(1).lower()
         info.number_of_resources = int(count) if count.isdigit() else {
             "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
@@ -603,22 +647,12 @@ def assert_fallback_business_info(text):
         info.contact_email = email_match.group(0).rstrip(".,;:")
 
     phone_match = re.search(
-        r"\b(?:phone(?:\s+number)?|mobile(?:\s+number)?|contact(?:\s+number)?|call\s+us\s+at|reach\s+us\s+at)\s*(?:is|:)?\s*(\+?[\d][\d\s().-]{6,}\d)",
+        r"\b(?:phone(?:\s+number)?|mobile(?:\s+number)?|contact(?:\s+number)?|my\s+(?:phone|number)|call\s+us\s+at|reach\s+(?:us|me)\s+(?:at|on))\s*(?:is|:)?\s*(\+?[\d][\d\s().-]{6,}\d)",
         message,
         flags=re.I,
     )
     if phone_match:
         info.contact_phone = re.sub(r"\s+", " ", phone_match.group(1)).strip(" .,;:")
-
-    location_match = re.search(
-        r"\b(?:located|based)\s+(?:in|at)\s+([^.!?\n]+)|"
-        r"\b(?:location|address)\s*(?:is|:)?\s*([^.!?\n]+)|"
-        r"\b(?:restaurant|cafe|business)\s+in\s+([^.!?\n]+)",
-        message,
-        flags=re.I,
-    )
-    if location_match:
-        info.location = next(group for group in location_match.groups() if group).strip(" ,.;:")
 
     deposit_match = re.search(
         r"(?:\u20b9|INR\s*|Rs\.?\s*)([\d,]+(?:\.\d{1,2})?)\s*(?:refundable\s+)?(?:booking\s+)?deposit\b|"

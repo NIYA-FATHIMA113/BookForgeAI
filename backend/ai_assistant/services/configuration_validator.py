@@ -16,14 +16,14 @@ def validate_business_configuration(configuration):
     if not configuration.business_name:
         missing_fields.append("business_name")
 
-    if not configuration.business_type:
+    from tenants.models import Tenant
+    supported_types = {value for value, _label in Tenant.BUSINESS_TYPES}
+    if configuration.business_type not in supported_types:
         missing_fields.append("business_type")
 
-    business_type = (configuration.business_type or "").strip().lower()
-
-    # Services are required for appointment businesses. Restaurants and turf
-    # businesses can be created around their bookable tables/pitches alone.
-    if business_type not in {"restaurant", "sports_turf"} and not configuration.services:
+    # Every generated public site needs offerings supplied by the owner. The
+    # reservation/turf resource itself is created separately by setup.
+    if not configuration.services:
         missing_fields.append("services")
 
     # Business hours

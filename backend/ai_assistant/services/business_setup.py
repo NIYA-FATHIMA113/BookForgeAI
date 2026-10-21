@@ -25,6 +25,8 @@ BUSINESS_TYPE_MAPPING = {
     "salon": "salon",
     "beauty salon": "salon",
     "hair salon": "salon",
+    "barber shop": "salon",
+    "barbershop": "salon",
 
     # Dental clinic
     "dental clinic": "clinic",
